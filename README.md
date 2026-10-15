@@ -6,8 +6,9 @@
 ![Docker](https://img.shields.io/badge/Docker-Compose-2496ED?logo=docker&logoColor=white)
 ![Telegram](https://img.shields.io/badge/Telegram-Bot-26A5E4?logo=telegram&logoColor=white)
 ![version](https://img.shields.io/badge/version-0.4.0-informational)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
-Лицензия пока не выбрана: файла `LICENSE` в репозитории нет.
+Проект под лицензией MIT, файл `LICENSE` лежит в корне репозитория.
 
 1. Скачайте проект и откройте его папку.
 2. Запустите `scripts/install.ps1` на Windows или `scripts/install.sh` на Linux и macOS.
