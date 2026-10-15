@@ -174,7 +174,7 @@ flowchart LR
 docker exec -it potok-worker python -m potok status
 ```
 
-Клонирование: подставьте ссылку своего репозитория (для нового аккаунта GitHub — эту). Сейчас в `git remote origin` указан `https://github.com/potok-git/potok.git`.
+Клонирование: подставьте ссылку своего репозитория (для нового аккаунта GitHub — эту). Публичный репозиторий проекта: `https://github.com/potok-git/potok.git`.
 
 ```text
 git clone <ссылка на ваш репозиторий>
