@@ -1,0 +1,234 @@
+{% extends "base.html" %}
+{% block title %}Поток — очередь VK{% endblock %}
+{% block head %}
+<meta name="csrf" content="{{ csrf }}">
+{% endblock %}
+{% block body %}
+<h1 class="h3 mb-3">Очередь выгрузки в ВК</h1>
+<p class="text-secondary">Здесь докачанные фильмы, которые ещё не попали в VK. Верхний уходит первым. Пока один файл отправляется, следующий ждёт.</p>
+<div id="vk-note" class="alert d-none"></div>
+<div class="card shadow-sm mb-4">
+  <div class="card-body">
+    <h2 class="h5">Сейчас отправляется</h2>
+    <div id="uploads"></div>
+  </div>
+</div>
+{% if stream_error %}<div class="alert alert-warning">{{ stream_error }}</div>{% endif %}
+<div class="card shadow-sm">
+  <div class="card-body">
+    {% if rows %}
+    <div class="table-responsive">
+      <table class="table align-middle">
+        <thead><tr><th>Очередь</th><th>Название</th><th>Состояние</th><th></th></tr></thead>
+        <tbody>
+          {% for item in rows %}
+          <tr>
+            <td>{{ item.place }}</td>
+            <td>{{ item.title }}</td>
+            <td>{{ item.status }}</td>
+            <td class="text-nowrap">
+              {% if item.can_up %}
+              <form method="post" action="{{ url_for('vk_queue_move', infohash=item.hash, action='up') }}" class="d-inline">
+                <input type="hidden" name="csrf" value="{{ csrf }}">
+                <button class="btn btn-sm btn-outline-secondary" type="submit">Выше</button>
+              </form>
+              {% endif %}
+              {% if item.can_down %}
+              <form method="post" action="{{ url_for('vk_queue_move', infohash=item.hash, action='down') }}" class="d-inline">
+                <input type="hidden" name="csrf" value="{{ csrf }}">
+                <button class="btn btn-sm btn-outline-secondary" type="submit">Ниже</button>
+              </form>
+              {% endif %}
+              <form method="post" action="{{ url_for('vk_queue_delete', infohash=item.hash) }}" class="d-inline" onsubmit="return confirm('Удалить из очереди, файл .torrent и видео?');">
+                <input type="hidden" name="csrf" value="{{ csrf }}">
+                <button class="btn btn-sm btn-outline-danger" type="submit">Удалить</button>
+              </form>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% else %}
+    <p class="mb-0 text-secondary">Сейчас нечего отправлять в VK.</p>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}
+{% block scripts %}
+<script>
+const csrf = document.querySelector('meta[name="csrf"]').content;
+const note = document.getElementById("vk-note");
+const uploadsBox = document.getElementById("uploads");
+const labels = {
+  uploading: "Отправка",
+  processing: "ВК обрабатывает файл",
+  stopping: "Останавливаю",
+  done: "Готово",
+  error: "Ошибка",
+  stopped: "Остановлено"
+};
+
+function showNote(kind, text) {
+  note.className = "alert alert-" + kind;
+  note.textContent = text;
+}
+
+function hideNote() {
+  note.className = "alert d-none";
+  note.textContent = "";
+}
+
+function vkLink(url) {
+  if (typeof url !== "string") return "";
+  if (url.startsWith("https://vk.com/") || url.startsWith("https://vkvideo.ru/")) return url;
+  return "";
+}
+
+async function callApi(path, payload) {
+  const response = await fetch(path, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "X-CSRF-Token": csrf
+    },
+    body: JSON.stringify(payload)
+  });
+  const data = await response.json().catch(() => ({}));
+  if (!response.ok) {
+    throw new Error(data.error || "Запрос не прошёл.");
+  }
+  return data;
+}
+
+function speedText(value) {
+  if (typeof value !== "number" || !isFinite(value) || value < 1) return "";
+  if (value >= 1073741824) return (value / 1073741824).toFixed(1) + " ГБ/с";
+  if (value >= 1048576) return (value / 1048576).toFixed(1) + " МБ/с";
+  if (value >= 1024) return (value / 1024).toFixed(1) + " КБ/с";
+  return Math.round(value) + " Б/с";
+}
+
+function renderUploads(rows) {
+  uploadsBox.replaceChildren();
+  if (!rows.length) {
+    const empty = document.createElement("p");
+    empty.className = "mb-0 text-secondary";
+    empty.textContent = "Сейчас ничего не отправляется.";
+    uploadsBox.append(empty);
+    return;
+  }
+  rows.forEach((item) => {
+    const block = document.createElement("div");
+    block.className = "mb-3";
+    const title = document.createElement("div");
+    title.textContent = item.title || item.name || "Видео";
+    const barWrap = document.createElement("div");
+    barWrap.className = "progress my-1";
+    const bar = document.createElement("div");
+    bar.className = "progress-bar";
+    bar.style.width = item.percent + "%";
+    bar.textContent = item.percent + "%";
+    barWrap.append(bar);
+    const state = document.createElement("div");
+    state.className = "small text-secondary";
+    let label = labels[item.status] || item.status;
+    const speed = item.status === "uploading" ? speedText(item.speed) : "";
+    if (speed) label += ", " + speed;
+    if (speed && typeof item.eta === "string" && item.eta) label += ", ещё " + item.eta;
+    state.textContent = label;
+    if (item.message) state.textContent += ". " + item.message;
+    block.append(title, barWrap, state);
+    const link = vkLink(item.page_url);
+    if (link) {
+      const anchor = document.createElement("a");
+      anchor.href = link;
+      anchor.target = "_blank";
+      anchor.rel = "noopener";
+      anchor.textContent = "Открыть";
+      block.append(anchor);
+    }
+    if (item.status === "uploading" || item.status === "processing" || item.status === "stopping") {
+      const button = document.createElement("button");
+      button.className = "btn btn-sm btn-outline-danger ms-2";
+      button.type = "button";
+      button.textContent = "Остановить";
+      button.disabled = item.status === "stopping";
+      button.addEventListener("click", () => stopUpload(item.id));
+      block.append(button);
+    }
+    if (item.status === "stopped" || item.status === "error") {
+      const again = document.createElement("button");
+      again.className = "btn btn-sm btn-outline-primary ms-2";
+      again.type = "button";
+      again.textContent = "Повторить";
+      again.addEventListener("click", () => retryUpload(item.id));
+      block.append(again);
+    }
+    if (item.status === "stopped" || item.status === "error" || item.status === "done") {
+      const away = document.createElement("button");
+      away.className = "btn btn-sm btn-outline-secondary ms-2";
+      away.type = "button";
+      away.textContent = "Убрать";
+      away.addEventListener("click", () => dismissUpload(item.id));
+      block.append(away);
+    }
+    uploadsBox.append(block);
+  });
+}
+
+async function retryUpload(id) {
+  hideNote();
+  try {
+    const data = await callApi("/api/vk/retry", {id});
+    showNote("success", data.message || "Отправляю снова.");
+    await loadUploads();
+  } catch (exc) {
+    showNote("danger", exc.message);
+  }
+}
+
+async function dismissUpload(id) {
+  hideNote();
+  try {
+    const data = await callApi("/api/vk/dismiss", {id});
+    showNote(data.warning ? "warning" : "success", data.warning || "Строка убрана из очереди.");
+    await loadUploads();
+  } catch (exc) {
+    showNote("danger", exc.message);
+  }
+}
+
+async function stopUpload(id) {
+  hideNote();
+  try {
+    const data = await callApi("/api/vk/stop", {id});
+    showNote(data.warning ? "warning" : "success", data.warning || "Останавливаю отправку.");
+    await loadUploads();
+  } catch (exc) {
+    showNote("danger", exc.message);
+  }
+}
+
+let uploadsLoading = false;
+
+async function loadUploads() {
+  if (uploadsLoading) return;
+  uploadsLoading = true;
+  let response;
+  try {
+    response = await fetch("/api/vk/uploads");
+  } catch (exc) {
+    uploadsLoading = false;
+    return;
+  }
+  uploadsLoading = false;
+  if (!response.ok) return;
+  const data = await response.json();
+  renderUploads(data.uploads || []);
+}
+
+loadUploads();
+setInterval(loadUploads, 3000);
+</script>
+{% endblock %}

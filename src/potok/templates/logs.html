@@ -1,0 +1,20 @@
+{% extends "base.html" %}
+{% block title %}Поток — журнал{% endblock %}
+{% block body %}
+<h1 class="h3 mb-3">Журнал worker</h1>
+<p class="text-secondary">Новые строки появляются сами. Файл: {{ log_path }}</p>
+<pre id="log" class="bg-dark text-light p-3 rounded" style="height: 70vh; overflow: auto; white-space: pre-wrap;"></pre>
+{% endblock %}
+{% block scripts %}
+<script>
+const box = document.getElementById("log");
+const source = new EventSource("{{ url_for('logs_stream') }}");
+source.onmessage = (event) => {
+  box.textContent += event.data + "\n";
+  box.scrollTop = box.scrollHeight;
+};
+source.onerror = () => {
+  box.textContent += "\nСвязь с журналом прервалась. Обновите страницу.\n";
+};
+</script>
+{% endblock %}

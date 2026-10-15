@@ -1,0 +1,83 @@
+# Настройки Потока. Секреты в этот файл не записываются.
+# Скопируйте в config/config.yaml, если файла ещё нет. Личные ID VK не подставляйте сюда.
+vpn:
+  interface: wg0
+  config_path: /etc/potok/wg0.conf
+  command_timeout_seconds: 30.0
+routing:
+  via_vpn:
+  - rss
+  - metadata
+  via_direct:
+  - downloads
+  vpn_domains: []
+logging:
+  level: INFO
+jackett:
+  jackett_base_url: http://worker:9117
+  jackett_rss_url: http://worker:9117/api/v2.0/indexers/rutracker-ru/results/torznab/api?t=search&cat=101730,101725,101719,101662,101731,101726,101720,101732,101727,101721,101661,101733,101728,101722,101657,100820,101677,101697,101736,101737,101757,101748,101673,101701,101675,101698,101676,101696,101738,101739,101758,101749,101672,101702,101695,101735,101752,101551,101353,101355,100125
+  jackett_api_key: ''
+  api_key_env: JACKETT_API_KEY
+  min_seeders: 1
+  min_size_bytes: 0
+  timeout_seconds: 30
+  page_count: 20
+rss:
+  timeout_seconds: 30.0
+  user_agent: Potok/0.2
+  metadata_dir: data/metadata
+  poll_interval_minutes: 60
+  feeds: []
+filters:
+  min_rating: null
+  max_age_days: null
+  genres: []
+  quality_keep: max
+  patterns:
+    rating: (?i)(?:rating|рейтинг)[:\s]*(\d+(?:[.,]\d+)?)
+    quality: (?i)\b(2160p|1080p|720p)\b
+    genre: (?i)(?:genre|жанр)[:\s]+([^,\]\n]+)
+database:
+  path: data/db/seen.db
+credentials:
+  username_env: POTOK_FEED_USER
+  password_env: POTOK_FEED_PASSWORD
+telegram:
+  token_env: POTOK_TELEGRAM_TOKEN
+  chat_id_env: POTOK_TELEGRAM_CHAT_ID
+  timeout_seconds: 30.0
+vk:
+  api_version: '5.131'
+  token_env: POTOK_VK_TOKEN
+  wallpost: false
+  is_private: false
+  privacy_view: by_link
+  chunk_bytes: 8388608
+  max_bytes: 16106127360
+  upload_idle_timeout_seconds: 300.0
+  upload_attempts: 3
+  poll_interval_seconds: 15.0
+  poll_timeout_seconds: 21600.0
+  api_timeout_seconds: 30.0
+  api_retries: 4
+  group_id: null
+  app_id: null
+delivery:
+  download_dir: data/downloads
+  aria2_bin: aria2c
+  aria2_timeout_seconds: 0.0
+streaming:
+  enabled: true
+  base_url: http://worker:8080
+  public_url: http://127.0.0.1:8090
+  timeout_seconds: 20.0
+  auto_add: true
+  server_torrent_dir: /opt/ts/inbox
+  portal_host: 0.0.0.0
+  portal_port: 8080
+  users_path: data/portal_users.db
+  username_env: POTOK_STREAM_USER
+  password_env: POTOK_STREAM_PASSWORD
+tmdb:
+  api_key_env: TMDB_API_KEY
+  timeout_seconds: 20.0

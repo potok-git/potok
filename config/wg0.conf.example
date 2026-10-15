@@ -1,0 +1,17 @@
+# Скопируйте этот файл в config/wg0.conf и подставьте свои значения.
+# config/wg0.conf в git не попадает.
+#
+# Приложение само держит туннель включённым.
+# Через него идут только Telegram, Rutracker и домены из настройки.
+# Строка AllowedIPs здесь не значит, что весь трафик уйдёт в VPN.
+
+[Interface]
+PrivateKey = REPLACE_WITH_YOUR_PRIVATE_KEY
+Address = 10.8.0.2/32
+DNS = 1.1.1.1
+
+[Peer]
+PublicKey = REPLACE_WITH_SERVER_PUBLIC_KEY
+Endpoint = vpn.example.com:51820
+AllowedIPs = 0.0.0.0/0
+PersistentKeepalive = 25

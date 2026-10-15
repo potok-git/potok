@@ -1,0 +1,130 @@
+{% extends "base.html" %}
+{% from "catalog.html" import catalog_style, catalog_filter, catalog_filter_button, catalog_size, catalog_rail, catalog_scripts, movie_face with context %}
+{% block title %}Поток — загрузки{% endblock %}
+{% block head %}
+{{ catalog_style() }}
+{% endblock %}
+{% block body %}
+<h1 class="h3 mb-3">Загрузки</h1>
+{% if note %}<div class="alert alert-info">{{ note }}</div>{% endif %}
+{% if stream_error %}<div class="alert alert-warning">{{ stream_error }}</div>{% endif %}
+<div class="card shadow-sm mb-4">
+  <div class="card-body">
+    <h2 class="h5">Добавить файл .torrent</h2>
+    <form method="post" enctype="multipart/form-data">
+      <input type="hidden" name="csrf" value="{{ csrf }}">
+      <div class="mb-3">
+        <label class="form-label" for="title">Название</label>
+        <input class="form-control" id="title" name="title">
+      </div>
+      <div class="mb-3">
+        <label class="form-label" for="torrent">Файл</label>
+        <input class="form-control" id="torrent" name="torrent" type="file" accept=".torrent">
+      </div>
+      <button class="btn btn-primary" type="submit">Добавить</button>
+    </form>
+  </div>
+</div>
+<div class="card shadow-sm mb-4">
+  <div class="card-body">
+    <h2 class="h5">Сейчас в qBittorrent</h2>
+    <p class="text-secondary">Кнопки «Выше» и «Ниже» меняют, какая раздача качается раньше. Ручная загрузка после скачивания ждёт кнопку «Отправить в VK» на карточке ниже. Одобренный фильм из ленты ещё 30 минут раздаётся, потом встаёт на паузу и уходит в VK. Если видео уже в VK и загрузке больше 10 дней, удаляются файл .torrent и само видео.</p>
+    {% if public_url %}<p><a href="{{ public_url }}">Открыть окно qBittorrent</a></p>{% endif %}
+    {% if sources %}
+    <div class="table-responsive">
+      <table class="table align-middle">
+        <thead><tr><th>Очередь</th><th>Название</th><th>Состояние</th><th>Готово</th><th>Скорость</th><th>Осталось</th><th></th></tr></thead>
+        <tbody>
+          {% for item in sources %}
+          <tr>
+            <td>{{ item.place if item.can_move else "—" }}</td>
+            <td>{{ item.title }}</td>
+            <td>{{ item.state_ru }}</td>
+            <td>{{ item.progress }}</td>
+            <td>{{ item.speed }}</td>
+            <td>{{ item.eta }}</td>
+            <td class="text-nowrap">
+              {% if item.hash|length == 40 %}
+              {% if item.can_up %}
+              <form method="post" action="{{ url_for('download_control', infohash=item.hash, action='up') }}" class="d-inline">
+                <input type="hidden" name="csrf" value="{{ csrf }}">
+                <button class="btn btn-sm btn-outline-secondary" type="submit">Выше</button>
+              </form>
+              {% endif %}
+              {% if item.can_down %}
+              <form method="post" action="{{ url_for('download_control', infohash=item.hash, action='down') }}" class="d-inline">
+                <input type="hidden" name="csrf" value="{{ csrf }}">
+                <button class="btn btn-sm btn-outline-secondary" type="submit">Ниже</button>
+              </form>
+              {% endif %}
+              <form method="post" action="{{ url_for('download_control', infohash=item.hash, action='resume' if item.paused else 'pause') }}" class="d-inline">
+                <input type="hidden" name="csrf" value="{{ csrf }}">
+                <button class="btn btn-sm btn-outline-secondary" type="submit">{{ 'Продолжить' if item.paused else 'Пауза' }}</button>
+              </form>
+              <form method="post" action="{{ url_for('download_control', infohash=item.hash, action='delete') }}" class="d-inline">
+                <input type="hidden" name="csrf" value="{{ csrf }}">
+                <button class="btn btn-sm btn-outline-danger" type="submit">Убрать</button>
+              </form>
+              {% endif %}
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% else %}
+    <p class="mb-0 text-secondary">Раздач пока нет.</p>
+    {% endif %}
+  </div>
+</div>
+<div class="pending-toolbar d-flex flex-wrap align-items-center gap-2 mb-3">
+  {% if items %}
+  {{ catalog_filter_button() }}
+  {% endif %}
+  {{ catalog_size(total, size, page_sizes, 'downloads') }}
+</div>
+{% if items %}
+{{ catalog_filter(genres, qualities, 'potok-downloads-filter') }}
+{% endif %}
+{% if not items %}
+<div class="alert alert-secondary">Нет вручную скачанных фильмов, которые ждут отправки в VK.</div>
+{% endif %}
+<div id="pending-list" class="row g-3">
+{% for item in items %}
+{% set shown = item.movie_title or release_title(item.title) or item.title %}
+{% set year = movie_year(shown) or movie_year(item.title) %}
+<div
+  class="col-12 col-md-6 col-xl-3 pending-card"
+  data-order="{{ loop.index0 }}"
+  data-size="{% if item.size_bytes is not none %}{{ '%.4f'|format(item.size_bytes / 1073741824) }}{% endif %}"
+  data-genre="{{ genre_text(item.genre) }}"
+  data-quality="{{ item.quality or '' }}"
+  data-year="{{ year if year is not none else '' }}"
+  data-runtime="{% if item.runtime_minutes %}{{ item.runtime_minutes }}{% endif %}"
+  data-seeds="{{ item.seeders if item.seeders is not none else '' }}"
+  data-rating="{{ item.rating if item.rating is not none else '' }}"
+>
+  <div class="card h-100">
+    {{ movie_face(item, year) }}
+    <div class="card-body d-flex flex-column">
+      <h2 class="h5"><span>{{ shown }}</span></h2>
+      <div class="movie-actions movie-actions-one mt-auto">
+        <form method="post" class="m-0">
+          <input type="hidden" name="csrf" value="{{ csrf }}">
+          <input type="hidden" name="action" value="vk">
+          <input type="hidden" name="video" value="{{ item.filename }}">
+          <button class="btn btn-primary w-100" type="submit">Отправить в VK</button>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+{% endfor %}
+</div>
+{% if total %}
+{{ catalog_rail(page, pages, page_numbers, size, 'downloads') }}
+{% endif %}
+{% endblock %}
+{% block scripts %}
+{{ catalog_scripts() }}
+{% endblock %}

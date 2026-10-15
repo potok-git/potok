@@ -1,0 +1,122 @@
+# Рабочий контейнер «Поток».
+# Имя задано явно: папка «Поток» для Compose не подходит.
+name: potok
+
+# VPN в worker включён постоянно, но только для Telegram, Rutracker
+# и доменов из настройки. Остальной трафик идёт напрямую.
+# Jackett и qBittorrent используют сеть worker, чтобы их запросы к этим
+# сайтам шли в тот же туннель. Видео с других адресов остаётся прямым.
+
+services:
+  worker:
+    build:
+      context: .
+      dockerfile: worker/Dockerfile
+    image: potok-worker:latest
+    container_name: potok-worker
+    cap_add:
+      - NET_ADMIN
+      - SYS_MODULE
+    sysctls:
+      - net.ipv4.conf.all.src_valid_mark=1
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=Europe/Moscow
+      - POTOK_CONFIG=/etc/potok/config.yaml
+      - POTOK_LOG_FILE=/app/data/logs/worker.log
+      - POTOK_TELEGRAM_TOKEN
+      - POTOK_TELEGRAM_CHAT_ID
+      - POTOK_STREAM_USER
+      - POTOK_STREAM_PASSWORD
+      - JACKETT_API_KEY
+    volumes:
+      - ./config/config.yaml:/etc/potok/config.yaml:ro
+      - ./config/wg0.conf:/etc/potok/wg0.conf:ro
+      - ./data:/app/data
+      # База SQLite на диске Docker: WAL на папке Windows ломается.
+      - potok-db:/app/data/db
+      # Служебные файлы образа linuxserver. Сюда не кладите wg0.conf:
+      # образ сам поднял бы туннель и держал его включённым.
+      - potok-lsio:/config
+      - /lib/modules:/lib/modules:ro
+    ports:
+      # Jackett и qBittorrent слушают в этой же сети, поэтому порты публикует worker.
+      - "9117:9117"
+      - "8090:8080"
+      - "6881:6881"
+      - "6881:6881/udp"
+    networks:
+      - potok
+    restart: unless-stopped
+
+  jackett:
+    image: lscr.io/linuxserver/jackett:latest
+    container_name: potok-jackett
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=Europe/Moscow
+    volumes:
+      - ./config/jackett:/config
+      # Описание трекера с чтением следующих страниц. Папка config/jackett в git не входит.
+      - ./config/jackett-definitions/rutracker-ru.yml:/config/cardigann/definitions/rutracker-ru.yml:ro
+      # Тот же DNS, что у worker: выбранные домены режутся в VPN, остальные — напрямую.
+      - ./config/vpn-resolv.conf:/etc/resolv.conf:ro
+    network_mode: service:worker
+    depends_on:
+      - worker
+    restart: unless-stopped
+
+  qbittorrent:
+    image: lscr.io/linuxserver/qbittorrent:latest
+    container_name: potok-qbittorrent
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=Europe/Moscow
+      - WEBUI_PORT=8080
+    volumes:
+      - ./data/qbittorrent:/config
+      - ./data/downloads:/downloads
+      - ./config/qbittorrent/qBittorrent.conf:/defaults/qBittorrent.conf:ro
+      - ./config/qbittorrent-init:/custom-cont-init.d:ro
+      - ./config/vpn-resolv.conf:/etc/resolv.conf:ro
+    network_mode: service:worker
+    depends_on:
+      - worker
+    restart: unless-stopped
+
+  portal:
+    build:
+      context: .
+      dockerfile: portal/Dockerfile
+    image: potok-portal:latest
+    container_name: potok-portal
+    environment:
+      - TZ=Europe/Moscow
+      - POTOK_CONFIG=/etc/potok/config.yaml
+      - POTOK_LOG_FILE=/app/data/logs/worker.log
+      - POTOK_STREAM_USER
+      - POTOK_STREAM_PASSWORD
+    volumes:
+      - ./config:/etc/potok
+      - ./data:/app/data
+      - potok-db:/app/data/db
+      # Сайт сам перезапускает worker после сохранения настроек.
+      - /var/run/docker.sock:/var/run/docker.sock
+    ports:
+      - "8080:8080"
+    networks:
+      - potok
+    depends_on:
+      - qbittorrent
+    restart: unless-stopped
+
+networks:
+  potok:
+    name: potok-net
+
+volumes:
+  potok-lsio:
+  potok-db:

@@ -1,0 +1,175 @@
+{% extends "base.html" %}
+{% block title %}Поток — пользователи{% endblock %}
+{% block head %}
+<style>
+  .users-page {
+    --ink: #1c1917;
+    --muted: #57534e;
+    --line: #e7e5e4;
+    --ok: #166534;
+    --fail: #991b1b;
+    --accent: #1493E0;
+    --paper: #fff;
+    --shadow: 0 8px 24px rgb(28 25 23 / 6%);
+    color: var(--ink);
+  }
+  .users-page h1 {
+    font-size: clamp(1.6rem, 3vw, 2.1rem);
+    margin: 0 0 8px;
+    letter-spacing: -0.03em;
+  }
+  .users-page .lead {
+    color: var(--muted);
+    margin: 0 0 28px;
+    max-width: 42rem;
+    line-height: 1.45;
+  }
+  .users-page .ok-msg { color: var(--ok); margin: 0 0 16px; font-weight: 650; }
+  .users-page .err { color: var(--fail); margin: 0 0 16px; }
+  .users-page .admin-box {
+    background: var(--paper);
+    border: 1px solid var(--line);
+    border-radius: 16px;
+    padding: 18px 20px;
+    margin: 0 0 20px;
+    box-shadow: var(--shadow);
+  }
+  .users-page .admin-box h2 { margin: 0 0 12px; font-size: 1.05rem; }
+  .users-page .admin-create {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    align-items: end;
+  }
+  .users-page .admin-create label {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    font-size: 0.8rem;
+    color: var(--muted);
+  }
+  .users-page .admin-create input,
+  .users-page .row-form input {
+    font: inherit;
+    border: 1px solid #d6d3d1;
+    border-radius: 10px;
+    padding: 8px 10px;
+    background: #fff;
+    color: var(--ink);
+  }
+  .users-page .row-form {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    align-items: center;
+    margin: 0;
+  }
+  .users-page .row-form input[type="password"] { min-width: 140px; }
+  .users-page .table-wrap {
+    overflow-x: auto;
+    border: 1px solid var(--line);
+    border-radius: 16px;
+    background: var(--paper);
+    box-shadow: var(--shadow);
+  }
+  .users-page table {
+    width: 100%;
+    border-collapse: collapse;
+    min-width: 640px;
+    margin: 0;
+  }
+  .users-page th,
+  .users-page td {
+    text-align: left;
+    padding: 12px 14px;
+    border-bottom: 1px solid var(--line);
+    font-size: 0.95rem;
+    vertical-align: middle;
+  }
+  .users-page th {
+    background: #fafaf9;
+    color: var(--muted);
+    font-weight: 650;
+    white-space: nowrap;
+  }
+  .users-page tr:last-child td { border-bottom: 0; }
+  .users-page tr:hover td { background: #fafaf9; }
+  .users-page td.status-ok { color: var(--ok); font-weight: 650; }
+  .users-page button {
+    font: inherit;
+    border: 0;
+    border-radius: 10px;
+    padding: 8px 14px;
+    cursor: pointer;
+    background: var(--accent);
+    color: #fff;
+  }
+  .users-page button:hover { background: #0e7ab8; }
+  .users-page button.danger { background: #991b1b; color: #fff; }
+  .users-page button.danger:hover { background: #7f1d1d; }
+  .users-page button:disabled { opacity: 0.45; cursor: not-allowed; }
+  .users-page form { margin: 0; }
+</style>
+{% endblock %}
+{% block body %}
+<div class="users-page">
+  <h1>Пользователи</h1>
+  <p class="lead">Добавляйте людей и меняйте пароли прямо в строке. Пароли в таблице не показываются. Себя удалить нельзя. Последнего пользователя тоже нельзя удалить.</p>
+  {% if note %}<p class="{{ 'ok-msg' if note_ok else 'err' }}">{{ note }}</p>{% endif %}
+  <section class="admin-box">
+    <h2>Новый пользователь</h2>
+    <form class="admin-create" method="post">
+      <input type="hidden" name="csrf" value="{{ csrf }}">
+      <input type="hidden" name="action" value="add">
+      <label>Логин
+        <input type="text" name="name" required minlength="1" maxlength="32" autocomplete="off">
+      </label>
+      <label>Пароль
+        <input type="password" name="password" required minlength="4" autocomplete="new-password">
+      </label>
+      <button type="submit">Добавить</button>
+    </form>
+  </section>
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>Логин</th>
+          <th>Статус</th>
+          <th>Изменить</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for name in names %}
+        <tr>
+          <td><strong>{{ name }}</strong></td>
+          <td class="status-ok">активен</td>
+          <td>
+            <form class="row-form" method="post">
+              <input type="hidden" name="csrf" value="{{ csrf }}">
+              <input type="hidden" name="action" value="password">
+              <input type="hidden" name="name" value="{{ name }}">
+              <input type="password" name="password" placeholder="новый пароль" autocomplete="new-password" aria-label="Новый пароль для {{ name }}">
+              <button type="submit">Сохранить</button>
+            </form>
+          </td>
+          <td>
+            <form method="post" onsubmit="return confirm('Удалить {{ name }}?');">
+              <input type="hidden" name="csrf" value="{{ csrf }}">
+              <input type="hidden" name="action" value="delete">
+              <input type="hidden" name="name" value="{{ name }}">
+              {% if name == current_user %}
+              <button type="button" class="danger" disabled title="Себя удалить нельзя">Удалить</button>
+              {% else %}
+              <button type="submit" class="danger">Удалить</button>
+              {% endif %}
+            </form>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

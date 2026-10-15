@@ -1,0 +1,6 @@
+#!/usr/bin/with-contenv bash
+
+# bot и шлёт карточки, и слушает кнопки. watch только шлёт, нажатия остаются без ответа.
+cd /app || exit 1
+export PYTHONPATH=/app/src
+exec python -m potok bot

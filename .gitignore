@@ -1,0 +1,18 @@
+.venv/
+__pycache__/
+.pytest_cache/
+.ruff_cache/
+*.pyc
+.env
+# Демо-базы и конфиги страницы «О проекте» — на GitHub не нужны.
+.about-demo/
+# Рабочий config.yaml с личными ID VK. В git кладём только config.yaml.example.
+config/config.yaml
+# Реальный конфиг WireGuard содержит приватный ключ — в git не кладём.
+config/wg0.conf
+# Пароли трекеров и ключ Jackett остаются только на этом компьютере.
+config/jackett/
+# База уже виденных записей и скачанные .torrent — локальные данные.
+data/
+graphify-out/cost.json
+graphify-out/cache/

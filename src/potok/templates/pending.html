@@ -1,0 +1,84 @@
+{% extends "base.html" %}
+{% from "catalog.html" import catalog_style, catalog_filter, catalog_filter_button, catalog_size, catalog_rail, catalog_scripts %}
+{% block title %}Поток — ожидают{% endblock %}
+{% block head %}
+{{ catalog_style() }}
+{% endblock %}
+{% block body %}
+<h1 class="h3 mb-3">Ожидают одобрения</h1>
+<p class="text-secondary">Кнопки пишут в ту же базу, что и Telegram-бот. Одобренные при обновлении повторно не добавляются.</p>
+<div
+  id="feed-status"
+  class="alert {{ 'alert-danger' if feed.error else 'alert-info' }}{% if not feed.message %} d-none{% endif %}"
+  data-running="{{ '1' if feed.running else '0' }}"
+  data-added="{{ feed.added }}"
+  data-page="{{ feed.page }}"
+>{{ feed.message }}</div>
+<div class="pending-toolbar d-flex flex-wrap align-items-center gap-2 mb-3">
+  <form method="post" action="{{ url_for('pending_update') }}" class="d-inline">
+    <input type="hidden" name="csrf" value="{{ csrf }}">
+    <button class="btn btn-primary" type="submit">Обновить</button>
+  </form>
+  <form method="post" action="{{ url_for('pending_clear') }}" class="d-inline">
+    <input type="hidden" name="csrf" value="{{ csrf }}">
+    <button class="btn btn-outline-secondary" type="submit">Очистить</button>
+  </form>
+  {% if items %}
+  {{ catalog_filter_button() }}
+  {% endif %}
+  {{ catalog_size(total, size, page_sizes) }}
+</div>
+{% if items %}
+{{ catalog_filter(genres, qualities) }}
+{% endif %}
+{% if not items %}
+<div class="alert alert-secondary" id="pending-empty">Сейчас нет записей, которые ждут решения.</div>
+{% endif %}
+<div id="pending-list" class="row g-3">
+{% include "pending_cards.html" %}
+</div>
+{% if total %}
+{{ catalog_rail(page, pages, page_numbers, size) }}
+{% endif %}
+{% endblock %}
+{% block scripts %}
+{{ catalog_scripts() }}
+<script>
+(() => {
+  const status = document.getElementById("feed-status");
+  const list = document.getElementById("pending-list");
+  if (!status || !list || status.dataset.running !== "1") return;
+  let added = Number(status.dataset.added || "0");
+  let page = Number(status.dataset.page || "0");
+
+  async function tick() {
+    const progress = await fetch("/pending/progress", { headers: { Accept: "application/json" } });
+    if (!progress.ok) return;
+    const data = await progress.json();
+    status.textContent = data.message || "";
+    status.classList.toggle("d-none", !data.message);
+    status.classList.toggle("alert-danger", Boolean(data.error));
+    status.classList.toggle("alert-info", !data.error);
+    const changed = data.added !== added || data.page !== page;
+    added = data.added;
+    page = data.page;
+    if (changed && data.added > 0) {
+      if (!document.getElementById("flt-count")) {
+        location.reload();
+        return;
+      }
+      const cards = await fetch("/pending/cards" + location.search);
+      if (cards.ok) {
+        list.innerHTML = await cards.text();
+        const empty = document.getElementById("pending-empty");
+        if (empty) empty.classList.add("d-none");
+        list.dispatchEvent(new Event("pending-cards"));
+      }
+    }
+    if (data.running) setTimeout(tick, 2000);
+  }
+
+  setTimeout(tick, 2000);
+})();
+</script>
+{% endblock %}

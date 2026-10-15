@@ -1,0 +1,147 @@
+{% extends "base.html" %}
+{% block title %}Поток — настройка{% endblock %}
+{% block body %}
+<div class="row justify-content-center">
+  <div class="col-lg-8">
+    <div class="d-flex justify-content-between align-items-baseline mb-3">
+      <h1 class="h3 mb-0">{% if step == 'done' %}Готово{% else %}Шаг {{ number }} из {{ total }}{% endif %}</h1>
+      {% if step != 'done' %}
+      <span class="text-secondary">{{ title }}</span>
+      {% endif %}
+    </div>
+
+    {% if step == 'password' %}
+    <p>Придумайте свой пароль вместо стандартного <code>potok</code>. Старый пароль после этого не подойдёт.</p>
+    <form method="post">
+      <input type="hidden" name="csrf" value="{{ csrf }}">
+      <input type="hidden" name="step" value="password">
+      <div class="mb-3">
+        <label class="form-label" for="password">Новый пароль</label>
+        <input class="form-control" id="password" name="password" type="password" required minlength="4" autocomplete="new-password">
+      </div>
+      <div class="mb-3">
+        <label class="form-label" for="password_repeat">Ещё раз</label>
+        <input class="form-control" id="password_repeat" name="password_repeat" type="password" required minlength="4" autocomplete="new-password">
+      </div>
+      <button class="btn btn-primary" type="submit" name="action" value="next">Дальше</button>
+      <button class="btn btn-outline-secondary" type="submit" name="action" value="later">Настроить позже</button>
+    </form>
+    {% endif %}
+
+    {% if step == 'jackett' %}
+    <p>Справа вверху в окне Jackett скопируйте <strong>API Key</strong> и вставьте его сюда.</p>
+    <p><a class="btn btn-outline-primary" href="{{ jackett_ui }}" target="_blank" rel="noopener">Открыть Jackett</a></p>
+    <form method="post">
+      <input type="hidden" name="csrf" value="{{ csrf }}">
+      <input type="hidden" name="step" value="jackett">
+      <div class="mb-3">
+        <label class="form-label" for="jackett_api_key">Ключ API</label>
+        <input class="form-control" id="jackett_api_key" name="jackett_api_key" type="password" autocomplete="off" required>
+      </div>
+      <button class="btn btn-outline-secondary" type="submit" name="action" value="back">Назад</button>
+      <button class="btn btn-primary" type="submit" name="action" value="next">Дальше</button>
+      <button class="btn btn-outline-secondary" type="submit" name="action" value="later">Настроить позже</button>
+    </form>
+    {% endif %}
+
+    {% if step == 'tracker' %}
+    <p>В Jackett нажмите <strong>Add Indexer</strong>, выберите трекер, введите его логин и пароль и сохраните. Пароль трекера в Поток копировать не нужно.</p>
+    {% if tracker_names %}
+    <p class="text-success">Найден трекер: {{ tracker_names|join(', ') }}.</p>
+    {% endif %}
+    <p><a class="btn btn-outline-primary" href="{{ jackett_ui }}" target="_blank" rel="noopener">Открыть Jackett</a></p>
+    <form method="post">
+      <input type="hidden" name="csrf" value="{{ csrf }}">
+      <input type="hidden" name="step" value="tracker">
+      <button class="btn btn-outline-secondary" type="submit" name="action" value="back">Назад</button>
+      <button class="btn btn-primary" type="submit" name="action" value="next">Дальше</button>
+      <button class="btn btn-outline-secondary" type="submit" name="action" value="later">Настроить позже</button>
+    </form>
+    {% endif %}
+
+    {% if step == 'feed' %}
+    <p>На карточке трекера в Jackett скопируйте ссылку <strong>Torznab Feed</strong> и вставьте её ниже. Список категорий не меняйте.</p>
+    <p><a class="btn btn-outline-primary" href="{{ jackett_ui }}" target="_blank" rel="noopener">Открыть Jackett</a></p>
+    <form method="post">
+      <input type="hidden" name="csrf" value="{{ csrf }}">
+      <input type="hidden" name="step" value="feed">
+      <div class="mb-3">
+        <label class="form-label" for="jackett_rss_url">Ссылка ленты</label>
+        <input class="form-control" id="jackett_rss_url" name="jackett_rss_url" value="{{ feed_url }}" required>
+      </div>
+      <button class="btn btn-outline-secondary" type="submit" name="action" value="back">Назад</button>
+      <button class="btn btn-primary" type="submit" name="action" value="next">Дальше</button>
+      <button class="btn btn-outline-secondary" type="submit" name="action" value="later">Настроить позже</button>
+    </form>
+    {% endif %}
+
+    {% if step == 'notify' %}
+    <p>Это необязательно. Можно нажать «Позже» и заполнить потом в настройках.</p>
+    <form method="post">
+      <input type="hidden" name="csrf" value="{{ csrf }}">
+      <input type="hidden" name="step" value="notify">
+      <div class="row g-3 mb-3">
+        <div class="col-md-4">
+          <div class="card h-100">
+            <div class="card-body">
+              <h2 class="h6">Telegram</h2>
+              <label class="form-label" for="telegram_token">Токен бота</label>
+              <input class="form-control mb-2" id="telegram_token" name="telegram_token" autocomplete="off">
+              <label class="form-label" for="telegram_chat_id">Id чата</label>
+              <input class="form-control" id="telegram_chat_id" name="telegram_chat_id" autocomplete="off">
+            </div>
+          </div>
+        </div>
+        <div class="col-md-4">
+          <div class="card h-100">
+            <div class="card-body">
+              <h2 class="h6">ВКонтакте</h2>
+              <p class="small text-secondary">Без токена фильмы скачаются, во ВКонтакте не уйдут.</p>
+              <label class="form-label" for="app_id">ID приложения</label>
+              <input class="form-control mb-2" id="app_id" name="app_id" value="{{ app_id }}" autocomplete="off">
+              <label class="form-label" for="vk_token">Токен</label>
+              <input class="form-control" id="vk_token" name="vk_token" type="password" autocomplete="off">
+            </div>
+          </div>
+        </div>
+        <div class="col-md-4">
+          <div class="card h-100">
+            <div class="card-body">
+              <h2 class="h6">Обложки TMDB</h2>
+              <label class="form-label" for="tmdb_api_key">Ключ TMDB</label>
+              <input class="form-control" id="tmdb_api_key" name="tmdb_api_key" type="password" autocomplete="off">
+            </div>
+          </div>
+        </div>
+      </div>
+      <button class="btn btn-outline-secondary" type="submit" name="action" value="back">Назад</button>
+      <button class="btn btn-primary" type="submit" name="action" value="next">Дальше</button>
+      <button class="btn btn-outline-secondary" type="submit" name="action" value="skip">Позже</button>
+      <button class="btn btn-link" type="submit" name="action" value="later">Настроить позже</button>
+    </form>
+    {% endif %}
+
+    {% if step == 'vpn' %}
+    <p>Вставьте свой текст WireGuard. Можно нажать «Позже». Без него запросы к Рутрекеру могут не открыться.</p>
+    <form method="post">
+      <input type="hidden" name="csrf" value="{{ csrf }}">
+      <input type="hidden" name="step" value="vpn">
+      <div class="mb-3">
+        <label class="form-label" for="wg_conf">Конфиг WireGuard</label>
+        <textarea class="form-control font-monospace" id="wg_conf" name="wg_conf" rows="12">{{ wg_text }}</textarea>
+      </div>
+      <button class="btn btn-outline-secondary" type="submit" name="action" value="back">Назад</button>
+      <button class="btn btn-primary" type="submit" name="action" value="next">Дальше</button>
+      <button class="btn btn-outline-secondary" type="submit" name="action" value="skip">Позже</button>
+      <button class="btn btn-link" type="submit" name="action" value="later">Настроить позже</button>
+    </form>
+    {% endif %}
+
+    {% if step == 'done' %}
+    <p>Настройка закончена. Дальше откройте очередь фильмов «Ожидают».</p>
+    <a class="btn btn-primary" href="{{ url_for('pending') }}">Ожидают</a>
+    <a class="btn btn-outline-secondary" href="{{ url_for('dashboard') }}">На главную</a>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

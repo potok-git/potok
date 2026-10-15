@@ -1,0 +1,10 @@
+.venv/
+**/__pycache__/
+.pytest_cache/
+.ruff_cache/
+.git/
+config/wg0.conf
+**/*.pyc
+data/
+docs/
+graphify-out/

@@ -1,0 +1,533 @@
+{% extends "base.html" %}
+{% block title %}Поток — настройки{% endblock %}
+{% block head %}
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/highlightjs/cdn-release@11.9.0/build/styles/github.min.css">
+<style>
+  #settings-tabs { row-gap: .35rem; }
+  #settings-tabs .nav-link { white-space: nowrap; }
+  #settings-pane {
+    background: #fff;
+    border: 1px solid #dee2e6;
+    border-radius: .375rem;
+    padding: 1rem 1rem .25rem;
+  }
+</style>
+{% endblock %}
+{% block body %}
+<h1 class="h3 mb-3">Настройки</h1>
+<p class="text-secondary">
+  Здесь задаётся, откуда брать фильмы и как часто их проверять, какие оставлять,
+  куда скачивать и заливать, а также пароли, обложки, журнал и VPN.
+  Файл {{ config_path }} при сохранении перезаписывается целиком.
+  Токены и пароли в него не попадают: они лежат в зашифрованном data/secrets.enc.
+  Пустое секретное поле старое значение не стирает.
+</p>
+<form method="post">
+  <input type="hidden" name="csrf" value="{{ csrf }}">
+  <input type="hidden" name="settings_form" value="1">
+  <ul class="nav nav-tabs flex-wrap mb-0" id="settings-tabs" role="tablist">
+    <li class="nav-item" role="presentation">
+      <button class="nav-link active" id="rss-tab" data-bs-toggle="tab" data-bs-target="#rss" type="button" role="tab" aria-controls="rss" aria-selected="true">Ленты RSS</button>
+    </li>
+    <li class="nav-item" role="presentation">
+      <button class="nav-link" id="filters-tab" data-bs-toggle="tab" data-bs-target="#filters" type="button" role="tab" aria-controls="filters" aria-selected="false">Фильтры</button>
+    </li>
+    <li class="nav-item" role="presentation">
+      <button class="nav-link" id="secrets-tab" data-bs-toggle="tab" data-bs-target="#secrets" type="button" role="tab" aria-controls="secrets" aria-selected="false">Учётные данные</button>
+    </li>
+    <li class="nav-item" role="presentation">
+      <button class="nav-link" id="tmdb-tab" data-bs-toggle="tab" data-bs-target="#tmdb" type="button" role="tab" aria-controls="tmdb" aria-selected="false">Обложки TMDB</button>
+    </li>
+    <li class="nav-item" role="presentation">
+      <button class="nav-link" id="vk-tab" data-bs-toggle="tab" data-bs-target="#vk" type="button" role="tab" aria-controls="vk" aria-selected="false">Параметры VK</button>
+    </li>
+    <li class="nav-item" role="presentation">
+      <button class="nav-link" id="delivery-tab" data-bs-toggle="tab" data-bs-target="#delivery" type="button" role="tab" aria-controls="delivery" aria-selected="false">Скачивание и qBittorrent</button>
+    </li>
+    <li class="nav-item" role="presentation">
+      <button class="nav-link" id="routes-tab" data-bs-toggle="tab" data-bs-target="#routes" type="button" role="tab" aria-controls="routes" aria-selected="false">Системные настройки</button>
+    </li>
+    <li class="nav-item" role="presentation">
+      <button class="nav-link" id="wg-tab" data-bs-toggle="tab" data-bs-target="#wg" type="button" role="tab" aria-controls="wg" aria-selected="false">WireGuard</button>
+    </li>
+  </ul>
+  <div class="tab-content mb-3" id="settings-pane">
+    <div class="tab-pane fade show active" id="rss" role="tabpanel" aria-labelledby="rss-tab" tabindex="0">
+          <div class="text-secondary mb-3">
+            <p class="mb-2">Этот раздел говорит программе, откуда брать новые фильмы и как часто это проверять.</p>
+            <ul class="mb-2">
+              <li><strong>Интервал опроса</strong> — как часто смотреть ленту. Сейчас это {{ draft.poll_interval_minutes }} мин.</li>
+              <li><strong>Таймаут</strong> — сколько секунд ждать ответ сайта. Если сайт молчит дольше, проверка останавливается.</li>
+              <li><strong>Имя программы</strong> — как Поток представляется сайту при запросе. Сейчас там <code>{{ draft.user_agent }}</code>.</li>
+              <li><strong>Папка метаданных</strong> — куда сохраняются файлы <code>.torrent</code>. Сейчас это <code>{{ draft.metadata_dir }}</code>.</li>
+              <li><strong>Адреса лент</strong> — имя и ссылка на RSS. Пустые строки не сохраняются.</li>
+            </ul>
+            {% if draft.jackett_rss_url %}
+            <p class="mb-0">В «Учётных данных» указана ссылка Jackett, поэтому новые фильмы приходят оттуда. Адреса в списке ниже программа пропускает.</p>
+            {% else %}
+            <p class="mb-0">Ссылки Jackett нет, поэтому новые фильмы берутся из адресов ниже. Когда в «Учётных данных» появится «Ссылка Torznab Feed», читаться будет только она.</p>
+            {% endif %}
+          </div>
+          <div class="row">
+            <div class="col-md-4 mb-3">
+              <label class="form-label">Интервал опроса, минуты</label>
+              <input class="form-control" name="poll_interval_minutes" value="{{ draft.poll_interval_minutes }}">
+            </div>
+            <div class="col-md-4 mb-3">
+              <label class="form-label">Таймаут, секунды</label>
+              <input class="form-control" name="rss_timeout" value="{{ draft.rss_timeout }}">
+            </div>
+            <div class="col-md-4 mb-3">
+              <label class="form-label">Имя программы</label>
+              <input class="form-control" name="user_agent" value="{{ draft.user_agent }}">
+            </div>
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Папка метаданных</label>
+            <input class="form-control" name="metadata_dir" value="{{ draft.metadata_dir }}">
+          </div>
+          <p class="mb-2">Адреса лент. Пустые строки не сохраняются.</p>
+          {% for feed in draft.feeds %}
+          <div class="row">
+            <div class="col-md-4 mb-2"><input class="form-control" name="feed_name" placeholder="Имя" value="{{ feed.name }}"></div>
+            <div class="col-md-8 mb-2"><input class="form-control" name="feed_url" placeholder="https://..." value="{{ feed.url }}"></div>
+          </div>
+          {% endfor %}
+          {% for _ in range(3) %}
+          <div class="row">
+            <div class="col-md-4 mb-2"><input class="form-control" name="feed_name" placeholder="Имя новой ленты"></div>
+            <div class="col-md-8 mb-2"><input class="form-control" name="feed_url" placeholder="https://..."></div>
+          </div>
+          {% endfor %}
+          <section class="border rounded p-3 mb-3 mt-3">
+            <h3 class="h6">Лента с паролем</h3>
+            <p class="text-secondary">Логин и пароль нужны, если чужая RSS-лента спрашивает пароль. Пустое поле старое значение не стирает.</p>
+            <div class="row">
+              <div class="col-md-6 mb-md-0 mb-3">
+                <label class="form-label">Логин</label>
+                <input class="form-control" name="feed_username" autocomplete="off" value="{{ draft.feed_username }}" placeholder="{{ 'задан' if draft.feed_user_set else 'не задан' }}">
+              </div>
+              <div class="col-md-6">
+                <label class="form-label">Пароль</label>
+                <input class="form-control" name="feed_password" type="password" autocomplete="new-password" value="{{ draft.feed_password }}" placeholder="{{ 'задан' if draft.feed_password_set else 'не задан' }}">
+              </div>
+            </div>
+          </section>
+    </div>
+    <div class="tab-pane fade" id="filters" role="tabpanel" aria-labelledby="filters-tab" tabindex="0">
+          <div class="text-secondary mb-3">
+            <p class="mb-2">Этот раздел решает, какие записи из ленты попадут в очередь на одобрение.</p>
+            <ul class="mb-0">
+              <li><strong>Минимальный рейтинг</strong> — ниже этого порога фильм пропускается. Пустое поле выключает проверку. Сейчас {{ draft.min_rating or "выключен" }}.</li>
+              <li><strong>Не старше, дней</strong> — старше этого срока запись не берётся. Пустое поле выключает проверку. Сейчас {{ draft.max_age_days or "выключен" }}.</li>
+              <li><strong>Жанры</strong> — список через запятую. Пустое поле значит любые. Сейчас {{ draft.genres or "любые" }}.</li>
+              <li><strong>Как искать рейтинг, жанр и качество</strong> — шаблоны, по которым эти слова вытаскиваются из текста ленты.</li>
+              <li><strong>Какие качества оставлять</strong> — если указаны только 2160p и 1080p, копии в 720p в очередь не попадут. Пустое поле — любое качество.</li>
+              <li><strong>Если фильм в нескольких качествах</strong> — в очередь попадёт одна копия. Сейчас {{ {"max": "максимальное", "average": "среднее", "min": "минимальное"}.get(draft.quality_keep, "максимальное") }}.</li>
+            </ul>
+          </div>
+          <div class="row">
+            <div class="col-md-4 mb-3">
+              <label class="form-label">Минимальный рейтинг</label>
+              <input class="form-control" name="min_rating" value="{{ draft.min_rating }}" placeholder="пусто = выключен">
+            </div>
+            <div class="col-md-4 mb-3">
+              <label class="form-label">Не старше, дней</label>
+              <input class="form-control" name="max_age_days" value="{{ draft.max_age_days }}" placeholder="пусто = выключен">
+            </div>
+            <div class="col-md-4 mb-3">
+              <label class="form-label">Жанры через запятую</label>
+              <input class="form-control" name="genres" value="{{ draft.genres }}" placeholder="пусто = любые">
+            </div>
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Как искать рейтинг</label>
+            <input class="form-control" name="pattern_rating" value="{{ draft.pattern_rating }}">
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Какие качества оставлять</label>
+            <input class="form-control" name="pattern_quality" value="{{ draft.pattern_quality }}">
+            <div class="form-text">Пустое поле — любое качество. Если в шаблоне только 2160p и 1080p, копии в 720p в очередь не попадут.</div>
+          </div>
+          <div class="mb-3">
+            <label class="form-label" for="quality-keep">Если фильм в нескольких качествах</label>
+            <select class="form-select" id="quality-keep" name="quality_keep">
+              <option value="max" {% if draft.quality_keep == "max" %}selected{% endif %}>оставить максимальное</option>
+              <option value="average" {% if draft.quality_keep == "average" %}selected{% endif %}>оставить среднее</option>
+              <option value="min" {% if draft.quality_keep == "min" %}selected{% endif %}>оставить минимальное</option>
+            </select>
+            <div class="form-text">Одинаковые фильмы в очереди не повторяются. Максимальное — самая высокая копия. Среднее — ближайшее к 1080p: и рядом с 720p, и рядом с 2160p остаётся 1080p. Если два качества одинаково близки к 1080p, берётся более высокое. Минимальное — самая низкая. Если в очереди уже лежит копия слабее выбранного правила, новая подходящая её заменяет. Более слабая копия выбранную не вытесняет. Среди копий одного качества остаётся раздача с большим числом сидов.</div>
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Как искать жанр</label>
+            <input class="form-control" name="pattern_genre" value="{{ draft.pattern_genre }}">
+          </div>
+    </div>
+    <div class="tab-pane fade" id="secrets" role="tabpanel" aria-labelledby="secrets-tab" tabindex="0">
+          <p class="text-secondary">Пароли и ключи в config.yaml не записываются. Пустое секретное поле старое значение не стирает.</p>
+          <section class="border rounded p-3 mb-3">
+            <h3 class="h6">Jackett</h3>
+            <ul class="text-secondary">
+              <li><strong>Ключ API</strong> — чтобы Поток мог спросить трекер. Его копируют в окне Jackett справа вверху.</li>
+              <li><strong>Адрес внутри Docker</strong> — где Jackett виден соседним контейнерам. Сейчас <code>{{ draft.jackett_base_url }}</code>.</li>
+              <li><strong>Ссылка Torznab Feed</strong> — откуда брать новые фильмы, когда это поле заполнено. Конец ссылки, список категорий после <code>cat=</code>, собирается из галочек ниже.</li>
+              <li><strong>Минимум сидов</strong> — раздачи с меньшим числом раздающих пропускаются. Сейчас {{ draft.jackett_min_seeders }}.</li>
+              <li><strong>Минимальный размер</strong> — файлы меньше этого числа байт пропускаются. Сейчас {{ draft.jackett_min_size_bytes }}.</li>
+              <li><strong>Сколько страниц</strong> — глубина прохода по Рутрекеру. На странице 50 раздач. 1 — только первая. Сейчас {{ draft.jackett_page_count }}.</li>
+            </ul>
+            <div class="mb-3">
+              <label class="form-label">Ключ API, JACKETT_API_KEY</label>
+              <input class="form-control" name="jackett_api_key" type="password" autocomplete="new-password" value="{{ draft.jackett_api_key }}" placeholder="{{ 'задан' if draft.jackett_key_set else 'не задан' }}">
+            </div>
+            <div class="mb-3">
+              <label class="form-label">Адрес внутри Docker</label>
+              <input class="form-control" name="jackett_base_url" value="{{ draft.jackett_base_url }}">
+            </div>
+            <div class="mb-3">
+              <label class="form-label">Ссылка Torznab Feed</label>
+              <input class="form-control" name="jackett_rss_url" value="{{ draft.jackett_rss_url }}" placeholder="пусто, пока трекер не добавлен">
+              {% if jackett_categories %}
+              <p class="form-text mb-2">Отметьте нужные категории. При сохранении они запишутся в конец ссылки. Если в самой ссылке поменять список категорий и сразу сохранить, галочки в этот раз ссылку не переписывают.</p>
+              {% for group in jackett_categories %}
+              <details class="mb-2" {% if group.open %}open{% endif %}>
+                <summary>{{ group.name }} — отмечено {{ group.picked }} из {{ group.items|length }}</summary>
+                <div class="row mt-2">
+                  {% for item in group.items %}
+                  <div class="col-md-6">
+                    <div class="form-check">
+                      <input class="form-check-input" type="checkbox" name="jackett_cat" value="{{ item.id }}" id="cat-{{ item.id }}" {% if item.checked %}checked{% endif %}>
+                      <label class="form-check-label" for="cat-{{ item.id }}">{{ item.label }}</label>
+                    </div>
+                  </div>
+                  {% endfor %}
+                </div>
+              </details>
+              {% endfor %}
+              <input type="hidden" name="jackett_cats_shown" value="1">
+              <input type="hidden" name="jackett_cat_base" value="{{ jackett_cat_base }}">
+              {% elif jackett_categories_note %}
+              <p class="form-text mb-0">{{ jackett_categories_note }}</p>
+              {% endif %}
+            </div>
+            <div class="mb-3">
+              <label class="form-label">Сколько страниц</label>
+              <input class="form-control" name="jackett_page_count" value="{{ draft.jackett_page_count }}">
+              <p class="form-text mb-0">Число от 1 до 20. Вторая страница — ещё 50 раздач после первой, с теми же категориями.</p>
+            </div>
+            <div class="row">
+              <div class="col-md-6 mb-3">
+                <label class="form-label">Минимум сидов</label>
+                <input class="form-control" name="jackett_min_seeders" value="{{ draft.jackett_min_seeders }}">
+              </div>
+              <div class="col-md-6 mb-0">
+                <label class="form-label">Минимальный размер, байт</label>
+                <input class="form-control" name="jackett_min_size_bytes" value="{{ draft.jackett_min_size_bytes }}">
+              </div>
+            </div>
+          </section>
+          <section class="border rounded p-3 mb-3">
+            <h3 class="h6">Telegram</h3>
+            <p class="mb-2">Как узнать id чата:</p>
+            <ol>
+              <li>Личный чат: в Telegram найдите <code>@userinfobot</code>, нажмите «Запустить» и скопируйте число <strong>Id</strong>.</li>
+              <li>Группа: добавьте своего бота в группу и разрешите ему писать. Добавьте туда <code>@getmyid_bot</code>, напишите любое сообщение и скопируйте <strong>Chat id</strong> вместе с минусом. Потом <code>@getmyid_bot</code> из группы удалите, своего бота оставьте.</li>
+              <li>Вставьте число в поле «Id чата» и нажмите «Сохранить» внизу страницы.</li>
+            </ol>
+            <p class="text-secondary">
+              Id группы начинается с <code>-100</code>. Это же число решает, кто может писать боту команды.
+              Если вписать id группы, сообщения уйдут в группу, а команды в личке бот перестанет принимать.
+            </p>
+            <div class="row">
+              <div class="col-md-6 mb-3">
+                <label class="form-label" for="telegram_token">Токен бота</label>
+                <div class="input-group">
+                  <input class="form-control" id="telegram_token" name="telegram_token" type="password" autocomplete="new-password" value="{{ draft.telegram_token }}" placeholder="{{ 'задан' if draft.telegram_token_set else 'не задан' }}">
+                  <button class="btn btn-outline-primary" type="submit" formaction="{{ url_for('telegram_check') }}">Проверить</button>
+                </div>
+              </div>
+              <div class="col-md-3 mb-3">
+                <label class="form-label">Id чата</label>
+                <input class="form-control" name="telegram_chat_id" autocomplete="off" value="{{ draft.telegram_chat_id }}" placeholder="{{ 'задан' if draft.telegram_chat_set else 'не задан' }}">
+              </div>
+              <div class="col-md-3 mb-md-0 mb-3">
+                <label class="form-label">Таймаут, секунды</label>
+                <input class="form-control" name="telegram_timeout" value="{{ draft.telegram_timeout }}">
+              </div>
+            </div>
+          </section>
+          <section class="border rounded p-3 mb-3">
+            <h3 class="h6">qBittorrent</h3>
+            <p class="text-secondary">Логин и пароль — вход в окно qBittorrent и для команд Потока.</p>
+            <div class="row">
+              <div class="col-md-6 mb-md-0 mb-3">
+                <label class="form-label">Логин</label>
+                <input class="form-control" name="stream_username" autocomplete="off" value="{{ draft.stream_username }}" placeholder="{{ 'задан' if draft.stream_user_set else 'не задан' }}">
+              </div>
+              <div class="col-md-6">
+                <label class="form-label">Пароль</label>
+                <input class="form-control" name="stream_password" type="password" autocomplete="new-password" value="{{ draft.stream_password }}" placeholder="{{ 'задан' if draft.stream_password_set else 'не задан' }}">
+              </div>
+            </div>
+          </section>
+    </div>
+    <div class="tab-pane fade" id="tmdb" role="tabpanel" aria-labelledby="tmdb-tab" tabindex="0">
+          <p>
+            После успешной загрузки видео во VK бот ищет фильм в The Movie Database
+            и присылает карточку с обложкой и данными фильма. Ссылка на VK — кнопка под сообщением.
+            Кнопки «Одобрить» и «Отклонить» остаются на первом сообщении, до загрузки.
+          </p>
+          <p>
+            Для России сайт закрыт на уровне DNS. Поток спрашивает только адреса
+            themoviedb.org и tmdb.org у сервера 9.9.9.9. Остальные сайты идут через
+            прежний DNS, Jackett и qBittorrent не затрагиваются.
+          </p>
+          <p class="mb-2">Как получить ключ:</p>
+          <ol>
+            <li>Откройте <a href="https://www.themoviedb.org/signup" target="_blank" rel="noopener">themoviedb.org</a> и зарегистрируйтесь.</li>
+            <li>Нажмите значок профиля → «Настройки» → раздел «API».</li>
+            <li>Нажмите «Запросить API-ключ». Тип — Developer. Заполните короткую форму.</li>
+            <li>Скопируйте «Ключ API» (API Key, v3 auth). Токен для чтения (v4) сюда не нужен.</li>
+            <li>Вставьте ключ в поле ниже и нажмите «Проверить ключ».</li>
+          </ol>
+          <p class="text-secondary">
+            Проверка ищет фильм «Матрица». Если ключ новый и поиск прошёл, он сразу записывается
+            в зашифрованный data/secrets.enc. В config.yaml ключ не попадает.
+          </p>
+          <div class="mb-3">
+            <label class="form-label" for="tmdb_api_key">Ключ API, TMDB_API_KEY</label>
+            <input class="form-control" id="tmdb_api_key" name="tmdb_api_key" type="password" autocomplete="new-password" value="{{ draft.tmdb_api_key }}" placeholder="{{ 'задан' if draft.tmdb_key_set else 'не задан' }}">
+          </div>
+          <button class="btn btn-outline-primary mb-3" type="submit" formaction="{{ url_for('tmdb_check') }}">Проверить ключ</button>
+    </div>
+    <div class="tab-pane fade" id="vk" role="tabpanel" aria-labelledby="vk-tab" tabindex="0">
+          <div class="text-secondary mb-3">
+            <p class="mb-2">Этот раздел говорит, куда заливать видео и как долго ждать VK.</p>
+            <ul class="mb-0">
+              <li><strong>Версия API</strong> — какую версию методов VK вызывать. Сейчас {{ draft.api_version }}.</li>
+              <li><strong>ID сообщества</strong> — в какое сообщество класть ролик. Пустое поле — на свою страницу. Сейчас {{ draft.group_id or "своя страница" }}.</li>
+              <li><strong>Кто видит</strong> — кто может открыть ролик. Сейчас {{ dict(privacy_choices).get(draft.privacy_view, draft.privacy_view) }}.</li>
+              <li><strong>Публиковать на стене</strong> — сразу сделать запись на стене.</li>
+              <li><strong>Скрытое видео</strong> — ролик не показывается в общем списке.</li>
+              <li><strong>Кусок</strong> — каким куском файл отправляется в VK, в байтах. Сейчас {{ draft.chunk_bytes }}.</li>
+              <li><strong>Максимум</strong> — файл больше этого размера в байтах в VK не отправляется. Сейчас {{ draft.max_bytes }}.</li>
+              <li><strong>Попытки загрузки</strong> — сколько раз повторить отправку файла, если связь оборвалась. Сейчас {{ draft.upload_attempts }}.</li>
+              <li><strong>Пауза загрузки</strong> — сколько секунд ждать, если отправка замерла. Сейчас {{ draft.upload_idle_timeout_seconds }}.</li>
+              <li><strong>Интервал проверки</strong> — как часто спрашивать, готов ли плеер, в секундах. Сейчас {{ draft.poll_interval_seconds }}.</li>
+              <li><strong>Срок проверки</strong> — сколько секунд ждать обработку на стороне VK. Сейчас {{ draft.poll_timeout_seconds }}.</li>
+              <li><strong>Таймаут API</strong> — сколько секунд ждать один ответ VK. Сейчас {{ draft.api_timeout_seconds }}.</li>
+              <li><strong>Повторы API</strong> — сколько раз повторить запрос, если VK временно не ответил. Сейчас {{ draft.api_retries }}.</li>
+            </ul>
+          </div>
+          <section class="border rounded p-3 mb-3">
+            <h2 class="h6">Токен VK</h2>
+            <p>Страница VK после разрешения пустая. Токен лежит в её адресе. Портал сам вытаскивает его из вставленной строки и запоминает срок.</p>
+            <ol>
+              <li>Впишите ID приложения. У «Потока» это число из короткого адреса, без букв <code>app</code>.</li>
+              <li>Нажмите «Открыть страницу VK» и разрешите доступ.</li>
+              <li>На пустой странице скопируйте всю адресную строку.</li>
+              <li>Вставьте её в поле ниже и нажмите «Сохранить токен».</li>
+            </ol>
+            <div class="mb-3">
+              <label class="form-label" for="app_id">ID приложения</label>
+              <input class="form-control" id="app_id" name="app_id" inputmode="numeric" value="{{ draft.app_id }}" placeholder="число из настроек приложения" data-api-version="{{ draft.api_version }}">
+            </div>
+            <p class="mb-3">
+              <a class="btn btn-primary{% if not vk_authorize %} disabled{% endif %}" id="vk-open" href="{{ vk_authorize or '#' }}" target="_blank" rel="noopener">Открыть страницу VK</a>
+            </p>
+            <div class="mb-3">
+              <label class="form-label" for="vk_address">Адресная строка</label>
+              <textarea class="form-control" id="vk_address" name="vk_address" rows="3" autocomplete="off" placeholder="https://oauth.vk.ru/blank.html#access_token=..."></textarea>
+            </div>
+            <button class="btn btn-primary" type="submit" formaction="{{ url_for('vk_token_paste') }}">Сохранить токен</button>
+            <div class="mt-3 mb-0">
+              <label class="form-label" for="vk_token">Токен вручную</label>
+              <input class="form-control" id="vk_token" name="vk_token" type="password" autocomplete="new-password" value="{{ draft.vk_token }}" placeholder="{{ 'задан' if draft.vk_token_set else 'не задан' }}">
+              <div class="form-text">Это поле нужно, только если токен уже скопирован отдельно. Пустое поле старое значение не стирает. Срок при этом не записывается.</div>
+            </div>
+          </section>
+          <div class="row">
+            <div class="col-md-4 mb-3">
+              <label class="form-label">Версия API</label>
+              <input class="form-control" name="api_version" value="{{ draft.api_version }}">
+            </div>
+            <div class="col-md-4 mb-3">
+              <label class="form-label">ID сообщества</label>
+              <input class="form-control" name="group_id" value="{{ draft.group_id }}" placeholder="пусто = своя страница">
+            </div>
+            <div class="col-md-4 mb-3">
+              <label class="form-label">Кто видит</label>
+              <select class="form-select" name="privacy_view">
+                {% for value, label in privacy_choices %}
+                <option value="{{ value }}" {% if value == draft.privacy_view %}selected{% endif %}>{{ label }}</option>
+                {% endfor %}
+              </select>
+            </div>
+          </div>
+          <div class="form-check mb-2">
+            <input class="form-check-input" type="checkbox" name="wallpost" value="1" id="wallpost" {% if draft.wallpost %}checked{% endif %}>
+            <label class="form-check-label" for="wallpost">Публиковать на стене</label>
+          </div>
+          <div class="form-check mb-3">
+            <input class="form-check-input" type="checkbox" name="is_private" value="1" id="is_private" {% if draft.is_private %}checked{% endif %}>
+            <label class="form-check-label" for="is_private">Скрытое видео</label>
+          </div>
+          <div class="row">
+            <div class="col-md-4 mb-3"><label class="form-label">Кусок, байт</label><input class="form-control" name="chunk_bytes" value="{{ draft.chunk_bytes }}"></div>
+            <div class="col-md-4 mb-3"><label class="form-label">Максимум, байт</label><input class="form-control" name="max_bytes" value="{{ draft.max_bytes }}"></div>
+            <div class="col-md-4 mb-3"><label class="form-label">Попытки загрузки</label><input class="form-control" name="upload_attempts" value="{{ draft.upload_attempts }}"></div>
+            <div class="col-md-3 mb-3"><label class="form-label">Пауза загрузки</label><input class="form-control" name="upload_idle_timeout_seconds" value="{{ draft.upload_idle_timeout_seconds }}"></div>
+            <div class="col-md-3 mb-3"><label class="form-label">Интервал проверки</label><input class="form-control" name="poll_interval_seconds" value="{{ draft.poll_interval_seconds }}"></div>
+            <div class="col-md-3 mb-3"><label class="form-label">Срок проверки</label><input class="form-control" name="poll_timeout_seconds" value="{{ draft.poll_timeout_seconds }}"></div>
+            <div class="col-md-3 mb-3"><label class="form-label">Таймаут API</label><input class="form-control" name="api_timeout_seconds" value="{{ draft.api_timeout_seconds }}"></div>
+            <div class="col-md-3 mb-3"><label class="form-label">Повторы API</label><input class="form-control" name="api_retries" value="{{ draft.api_retries }}"></div>
+          </div>
+    </div>
+    <div class="tab-pane fade" id="delivery" role="tabpanel" aria-labelledby="delivery-tab" tabindex="0">
+          <div class="text-secondary mb-3">
+            <p class="mb-2">Этот раздел говорит, куда скачивать видео и как связаться с qBittorrent.</p>
+            <ul class="mb-0">
+              <li><strong>Папка видео</strong> — куда aria2c кладёт скачанные файлы. Сейчас <code>{{ draft.download_dir }}</code>.</li>
+              <li><strong>Программа aria2c</strong> — имя программы, которая качает раздачу. Сейчас <code>{{ draft.aria2_bin }}</code>.</li>
+              <li><strong>Таймаут aria2c</strong> — сколько секунд ждать скачивание. 0 значит без лимита. Сейчас {{ draft.aria2_timeout }}.</li>
+              <li><strong>qBittorrent включён</strong> — сайт показывает раздачи и может добавлять их в qBittorrent.</li>
+              <li><strong>После скачивания добавлять торрент</strong> — готовый файл .torrent уходит в qBittorrent.</li>
+              <li><strong>Адрес внутри Docker</strong> — как Поток стучится в qBittorrent из контейнера. Сейчас <code>{{ draft.base_url }}</code>.</li>
+              <li><strong>Адрес в браузере</strong> — ссылка «Открыть окно qBittorrent». Сейчас <code>{{ draft.public_url }}</code>.</li>
+              <li><strong>Таймаут</strong> — сколько секунд ждать ответ qBittorrent. Сейчас {{ draft.stream_timeout }}.</li>
+              <li><strong>Хост и порт портала</strong> — на каком адресе открывается этот сайт. Сейчас {{ draft.portal_host }}:{{ draft.portal_port }}. Новый адрес заработает после перезапуска контейнера portal.</li>
+            </ul>
+          </div>
+          <div class="row">
+            <div class="col-md-4 mb-3"><label class="form-label">Папка видео</label><input class="form-control" name="download_dir" value="{{ draft.download_dir }}"></div>
+            <div class="col-md-4 mb-3"><label class="form-label">Программа aria2c</label><input class="form-control" name="aria2_bin" value="{{ draft.aria2_bin }}"></div>
+            <div class="col-md-4 mb-3"><label class="form-label">Таймаут aria2c, 0 = без лимита</label><input class="form-control" name="aria2_timeout" value="{{ draft.aria2_timeout }}"></div>
+          </div>
+          <div class="form-check mb-2">
+            <input class="form-check-input" type="checkbox" name="streaming_enabled" value="1" id="streaming_enabled" {% if draft.streaming_enabled %}checked{% endif %}>
+            <label class="form-check-label" for="streaming_enabled">qBittorrent включён</label>
+          </div>
+          <div class="form-check mb-3">
+            <input class="form-check-input" type="checkbox" name="auto_add" value="1" id="auto_add" {% if draft.auto_add %}checked{% endif %}>
+            <label class="form-check-label" for="auto_add">После скачивания добавлять торрент в qBittorrent</label>
+          </div>
+          <div class="row">
+            <div class="col-md-6 mb-3"><label class="form-label">Адрес qBittorrent внутри Docker</label><input class="form-control" name="base_url" value="{{ draft.base_url }}"></div>
+            <div class="col-md-6 mb-3"><label class="form-label">Адрес в браузере</label><input class="form-control" name="public_url" value="{{ draft.public_url }}"></div>
+            <div class="col-md-4 mb-3"><label class="form-label">Таймаут</label><input class="form-control" name="stream_timeout" value="{{ draft.stream_timeout }}"></div>
+            <div class="col-md-2 mb-3"><label class="form-label">Хост портала</label><input class="form-control" name="portal_host" value="{{ draft.portal_host }}"></div>
+            <div class="col-md-2 mb-3"><label class="form-label">Порт</label><input class="form-control" name="portal_port" value="{{ draft.portal_port }}"></div>
+          </div>
+    </div>
+    <div class="tab-pane fade" id="routes" role="tabpanel" aria-labelledby="routes-tab" tabindex="0">
+          <div class="text-secondary mb-3">
+            <p class="mb-2">Этот раздел задаёт подробность журнала и файл очереди.</p>
+            <ul class="mb-0">
+              <li><strong>Уровень журнала</strong> — насколько подробно писать data/logs/worker.log. Сейчас {{ draft.log_level }}. INFO — обычные события, DEBUG — ещё и служебные подробности.</li>
+              <li><strong>Файл базы</strong> — очередь фильмов и решения «одобрить» или «отклонить». Сейчас <code>{{ draft.database_path }}</code>.</li>
+            </ul>
+          </div>
+          <div class="row">
+            <div class="col-md-4 mb-3">
+              <label class="form-label">Уровень журнала</label>
+              <select class="form-select" name="log_level">
+                {% for item in log_levels %}
+                <option value="{{ item }}" {% if item == draft.log_level %}selected{% endif %}>{{ item }}</option>
+                {% endfor %}
+              </select>
+            </div>
+            <div class="col-md-8 mb-3">
+              <label class="form-label">Файл базы</label>
+              <input class="form-control" name="database_path" value="{{ draft.database_path }}">
+            </div>
+          </div>
+          <section class="border rounded p-3 mb-3">
+            <h3 class="h6">VPN</h3>
+            <ul class="text-secondary">
+              <li><strong>Туннель</strong> включён постоянно. Обычный трафик, включая видео, идёт напрямую.</li>
+              <li><strong>Всегда через VPN</strong> — Telegram и Rutracker. Эти имена убрать нельзя: {{ draft.required_vpn_domains }}.</li>
+              <li><strong>Дополнительные домены</strong> — другие торрент-сайты, через запятую. Пишите имя как в адресе, например <code>kinozal.tv</code>. Поддомен вроде <code>bt.example.com</code> добавляйте отдельно.</li>
+              <li><strong>Интерфейс</strong> — имя туннеля. Сейчас {{ draft.interface }}.</li>
+              <li><strong>Таймаут команды</strong> — сколько секунд ждать команду VPN. Сейчас {{ draft.vpn_timeout }}.</li>
+            </ul>
+            <div class="mb-3">
+              <label class="form-label">Дополнительные домены через VPN</label>
+              <input class="form-control" name="vpn_domains" value="{{ draft.vpn_domains }}" placeholder="kinozal.tv, nnmclub.to">
+            </div>
+            <div class="row">
+              <div class="col-md-4 mb-3 mb-md-0"><label class="form-label">Интерфейс VPN</label><input class="form-control" name="interface" value="{{ draft.interface }}"></div>
+              <div class="col-md-4 mb-3 mb-md-0"><label class="form-label">Таймаут команды VPN</label><input class="form-control" name="vpn_timeout" value="{{ draft.vpn_timeout }}"></div>
+              <div class="col-md-4"><label class="form-label">Путь в контейнере</label><input class="form-control" value="{{ draft.config_path_vpn }}" disabled></div>
+            </div>
+          </section>
+    </div>
+    <div class="tab-pane fade" id="wg" role="tabpanel" aria-labelledby="wg-tab" tabindex="0">
+          <div class="text-secondary mb-3">
+            <p class="mb-2">Этот раздел хранит текст туннеля WireGuard.</p>
+            <ul class="mb-0">
+              <li><strong>Поле wg0.conf</strong> — настройки туннеля: адреса, ключи и куда подключаться.</li>
+              <li><strong>Рабочий файл</strong> <code>{{ wg_path }}</code> нужен самой программе WireGuard, поэтому он остаётся обычным текстом и в git не попадает.</li>
+              <li><strong>Копия в secrets.enc</strong> зашифрована.</li>
+              <li><strong>Подсветка</strong> ниже только показывает текст удобнее. В файл она не записывается.</li>
+              <li><strong>Проверить</strong> записывает текст поля в рабочий файл и поднимает туннель. Он остаётся включённым, но через него идут только Telegram, Rutracker и домены из настройки. На странице появится статус или ошибка.</li>
+            </ul>
+          </div>
+          <label class="form-label" for="wg_conf">wg0.conf</label>
+          <textarea class="form-control font-monospace mb-3" id="wg_conf" name="wg_conf" rows="14">{{ draft.wg_conf }}</textarea>
+          <button class="btn btn-outline-primary mb-3" type="submit" formaction="{{ url_for('wireguard_check') }}">Проверить</button>
+          <div class="small text-secondary mb-1">Подсветка</div>
+          <pre class="border rounded p-3 bg-white mb-3"><code id="wg-code" class="language-ini"></code></pre>
+    </div>
+  </div>
+  <button class="btn btn-primary" type="submit">Сохранить настройки</button>
+</form>
+{% endblock %}
+{% block scripts %}
+<script src="https://cdn.jsdelivr.net/gh/highlightjs/cdn-release@11.9.0/build/highlight.min.js"></script>
+<script>
+const area = document.getElementById("wg_conf");
+const code = document.getElementById("wg-code");
+function refreshWg() {
+  code.innerHTML = hljs.highlight(area.value, {language: "ini"}).value;
+}
+area.addEventListener("input", refreshWg);
+refreshWg();
+
+const hashButton = location.hash
+  ? document.querySelector('#settings-tabs [data-bs-target="' + location.hash + '"]')
+  : null;
+const savedTab = hashButton ? location.hash : sessionStorage.getItem("potok-settings-tab");
+if (savedTab) {
+  const savedButton = document.querySelector('#settings-tabs [data-bs-target="' + savedTab + '"]');
+  if (savedButton) bootstrap.Tab.getOrCreateInstance(savedButton).show();
+}
+document.querySelectorAll("#settings-tabs [data-bs-toggle='tab']").forEach((button) => {
+  button.addEventListener("shown.bs.tab", () => {
+    sessionStorage.setItem("potok-settings-tab", button.getAttribute("data-bs-target"));
+  });
+});
+
+const appId = document.getElementById("app_id");
+const vkOpen = document.getElementById("vk-open");
+function refreshVkLink() {
+  const id = appId.value.trim();
+  if (!/^[1-9]\d{0,9}$/.test(id)) {
+    vkOpen.href = "#";
+    vkOpen.classList.add("disabled");
+    return;
+  }
+  const params = new URLSearchParams({
+    client_id: id,
+    display: "page",
+    redirect_uri: "https://oauth.vk.ru/blank.html",
+    scope: "video",
+    response_type: "token",
+    v: appId.dataset.apiVersion || "5.131",
+    revoke: "1",
+  });
+  vkOpen.href = "https://oauth.vk.ru/authorize?" + params.toString();
+  vkOpen.classList.remove("disabled");
+}
+appId.addEventListener("input", refreshVkLink);
+refreshVkLink();
+</script>
+{% endblock %}

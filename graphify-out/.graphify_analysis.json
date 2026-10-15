@@ -1,0 +1,263 @@
+{
+  "communities": {
+    "0": [
+      "src_potok_vpn_py_completedprocess",
+      "src_potok_vpn_py_exception",
+      "src_potok_vpn_py_path",
+      "src_potok_vpn_rationale_15",
+      "src_potok_vpn_rationale_19",
+      "src_potok_vpn_rationale_31",
+      "src_potok_vpn_rationale_36",
+      "src_potok_vpn_rationale_54",
+      "src_potok_vpn_vpnerror",
+      "src_potok_vpn_vpnmanager",
+      "src_potok_vpn_vpnmanager_down",
+      "src_potok_vpn_vpnmanager_ensure_config",
+      "src_potok_vpn_vpnmanager_failure",
+      "src_potok_vpn_vpnmanager_init",
+      "src_potok_vpn_vpnmanager_is_up",
+      "src_potok_vpn_vpnmanager_run",
+      "src_potok_vpn_vpnmanager_up"
+    ],
+    "1": [
+      "argparse",
+      "os",
+      "src_potok_config_appconfig",
+      "src_potok_main",
+      "src_potok_main_config_path",
+      "src_potok_main_log_state",
+      "src_potok_main_main",
+      "src_potok_main_py_path",
+      "src_potok_main_rationale_1",
+      "src_potok_main_rationale_66",
+      "src_potok_main_run_demo",
+      "src_potok_main_setup_logging",
+      "sys"
+    ],
+    "2": [
+      "pathlib",
+      "src_potok_vpn",
+      "src_potok_vpn_rationale_1",
+      "src_potok_vpn_rationale_113",
+      "src_potok_vpn_redact_secrets",
+      "subprocess",
+      "tests_test_main",
+      "tests_test_main_py_path",
+      "tests_test_main_test_demo_toggles_up_then_down",
+      "tests_test_main_test_demo_toggles_up_then_down_down",
+      "tests_test_main_test_demo_toggles_up_then_down_is_up",
+      "tests_test_main_test_demo_toggles_up_then_down_up",
+      "tests_test_vpn_test_redact_secrets"
+    ],
+    "3": [
+      "pytest",
+      "tests_test_vpn",
+      "tests_test_vpn_manager",
+      "tests_test_vpn_ok",
+      "tests_test_vpn_py_completedprocess",
+      "tests_test_vpn_py_path",
+      "tests_test_vpn_test_down_when_already_down",
+      "tests_test_vpn_test_missing_wg_binary",
+      "tests_test_vpn_test_up_calls_wg_quick",
+      "tests_test_vpn_test_up_failure_hides_private_key",
+      "tests_test_vpn_test_up_missing_config",
+      "tests_test_vpn_test_up_skips_when_already_active",
+      "unittest_mock"
+    ],
+    "4": [
+      "src_potok_config_configerror",
+      "src_potok_config_name_list",
+      "src_potok_config_py_exception",
+      "src_potok_config_py_path",
+      "src_potok_config_rationale_19",
+      "src_potok_config_required_str",
+      "src_potok_config_section"
+    ],
+    "5": [
+      "dataclasses",
+      "logging",
+      "re",
+      "src_potok_config",
+      "src_potok_config_routingsettings",
+      "yaml"
+    ],
+    "6": [
+      "tests_test_config",
+      "tests_test_config_py_path",
+      "tests_test_config_test_bad_interface",
+      "tests_test_config_test_empty_route_list",
+      "tests_test_config_test_load_config_ok",
+      "tests_test_config_test_missing_file"
+    ],
+    "7": [
+      "src_potok_config_load_config",
+      "src_potok_config_rationale_43",
+      "src_potok_config_vpnsettings"
+    ],
+    "8": [
+      "src_potok_init",
+      "src_potok_init_rationale_1"
+    ],
+    "9": [
+      "pkg_potok"
+    ]
+  },
+  "cohesion": {
+    "0": 0.21323529411764705,
+    "1": 0.23076923076923078,
+    "2": 0.16666666666666666,
+    "3": 0.358974358974359,
+    "4": 0.38095238095238093,
+    "5": 0.3333333333333333,
+    "6": 0.5333333333333333,
+    "7": 0.6666666666666666,
+    "8": 1.0,
+    "9": 1.0
+  },
+  "gods": [
+    {
+      "id": "src_potok_config_load_config",
+      "label": "load_config()",
+      "degree": 16
+    },
+    {
+      "id": "src_potok_vpn_vpnmanager",
+      "label": "VpnManager",
+      "degree": 15
+    },
+    {
+      "id": "src_potok_vpn_vpnerror",
+      "label": "VpnError",
+      "degree": 12
+    },
+    {
+      "id": "src_potok_config_configerror",
+      "label": "ConfigError",
+      "degree": 12
+    },
+    {
+      "id": "src_potok_main_main",
+      "label": "main()",
+      "degree": 10
+    },
+    {
+      "id": "tests_test_vpn_manager",
+      "label": "_manager()",
+      "degree": 9
+    },
+    {
+      "id": "tests_test_main_test_demo_toggles_up_then_down",
+      "label": "test_demo_toggles_up_then_down()",
+      "degree": 7
+    },
+    {
+      "id": "src_potok_main_run_demo",
+      "label": "run_demo()",
+      "degree": 6
+    },
+    {
+      "id": "tests_test_vpn_ok",
+      "label": "_ok()",
+      "degree": 6
+    },
+    {
+      "id": "tests_test_vpn_test_up_failure_hides_private_key",
+      "label": "test_up_failure_hides_private_key()",
+      "degree": 5
+    }
+  ],
+  "surprises": [
+    {
+      "source": "test_missing_wg_binary()",
+      "target": "VpnError",
+      "source_files": [
+        "tests/test_vpn.py",
+        "src/potok/vpn.py"
+      ],
+      "confidence": "INFERRED",
+      "relation": "uses",
+      "why": "inferred connection - not explicitly stated in source; connects across different repos/directories; bridges separate communities"
+    },
+    {
+      "source": "test_up_failure_hides_private_key()",
+      "target": "VpnError",
+      "source_files": [
+        "tests/test_vpn.py",
+        "src/potok/vpn.py"
+      ],
+      "confidence": "INFERRED",
+      "relation": "uses",
+      "why": "inferred connection - not explicitly stated in source; connects across different repos/directories; bridges separate communities"
+    },
+    {
+      "source": "test_up_missing_config()",
+      "target": "VpnError",
+      "source_files": [
+        "tests/test_vpn.py",
+        "src/potok/vpn.py"
+      ],
+      "confidence": "INFERRED",
+      "relation": "uses",
+      "why": "inferred connection - not explicitly stated in source; connects across different repos/directories; bridges separate communities"
+    },
+    {
+      "source": "test_demo_toggles_up_then_down()",
+      "target": "VpnManager",
+      "source_files": [
+        "tests/test_main.py",
+        "src/potok/vpn.py"
+      ],
+      "confidence": "INFERRED",
+      "relation": "uses",
+      "why": "inferred connection - not explicitly stated in source; connects across different repos/directories; bridges separate communities"
+    },
+    {
+      "source": "_manager()",
+      "target": "VpnManager",
+      "source_files": [
+        "tests/test_vpn.py",
+        "src/potok/vpn.py"
+      ],
+      "confidence": "INFERRED",
+      "relation": "uses",
+      "why": "inferred connection - not explicitly stated in source; connects across different repos/directories; bridges separate communities"
+    }
+  ],
+  "questions": [
+    {
+      "type": "bridge_node",
+      "question": "Why does `VpnManager` connect `Community 0` to `Community 1`, `Community 2`, `Community 3`?",
+      "why": "High betweenness centrality (0.254) - this node is a cross-community bridge."
+    },
+    {
+      "type": "bridge_node",
+      "question": "Why does `VpnError` connect `Community 0` to `Community 1`, `Community 2`, `Community 3`?",
+      "why": "High betweenness centrality (0.149) - this node is a cross-community bridge."
+    },
+    {
+      "type": "bridge_node",
+      "question": "Why does `load_config()` connect `Community 7` to `Community 1`, `Community 4`, `Community 5`, `Community 6`?",
+      "why": "High betweenness centrality (0.134) - this node is a cross-community bridge."
+    },
+    {
+      "type": "verify_inferred",
+      "question": "Are the 4 inferred relationships involving `VpnManager` (e.g. with `log_state()` and `run_demo()`) actually correct?",
+      "why": "`VpnManager` has 4 INFERRED edges - model-reasoned connections that need verification."
+    },
+    {
+      "type": "verify_inferred",
+      "question": "Are the 4 inferred relationships involving `VpnError` (e.g. with `main()` and `test_missing_wg_binary()`) actually correct?",
+      "why": "`VpnError` has 4 INFERRED edges - model-reasoned connections that need verification."
+    },
+    {
+      "type": "verify_inferred",
+      "question": "Are the 4 inferred relationships involving `ConfigError` (e.g. with `main()` and `test_bad_interface()`) actually correct?",
+      "why": "`ConfigError` has 4 INFERRED edges - model-reasoned connections that need verification."
+    },
+    {
+      "type": "verify_inferred",
+      "question": "Are the 2 inferred relationships involving `main()` (e.g. with `ConfigError` and `VpnError`) actually correct?",
+      "why": "`main()` has 2 INFERRED edges - model-reasoned connections that need verification."
+    }
+  ]
+}

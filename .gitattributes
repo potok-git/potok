@@ -1,0 +1,3 @@
+worker/s6/svc-wireguard-run text eol=lf
+config/qbittorrent-init/10-seed-conf text eol=lf
+scripts/install.sh text eol=lf

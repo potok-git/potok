@@ -1,0 +1,461 @@
+{% extends "base.html" %}
+{% from "catalog.html" import catalog_style, catalog_filter, catalog_filter_button, catalog_size, catalog_rail, catalog_scripts %}
+{% block title %}Поток — ВК{% endblock %}
+{% block head %}
+<meta name="csrf" content="{{ csrf }}">
+{{ catalog_style() }}
+{% endblock %}
+{% block body %}
+<h1 class="h3 mb-3">ВК</h1>
+<p class="text-secondary">
+  Здесь ролики, которые уже лежат во ВКонтакте: название, описание и ссылка.
+  Пока файл уходит в VK, прогресс виден в очереди выгрузки.
+  Кнопки вызывают API портала:
+  список <code>GET /api/vk</code>,
+  правка <code>POST /api/vk/edit</code>,
+  удаление <code>POST /api/vk/delete</code>,
+  остановка <code>POST /api/vk/stop</code>,
+  убрать строку <code>POST /api/vk/dismiss</code>,
+  отправка в бот <code>POST /api/vk/bot</code>.
+</p>
+<div id="vk-error" class="alert alert-warning d-none"></div>
+<div id="vk-note" class="alert d-none"></div>
+<h2 class="h5 mb-3">Видео в ВК</h2>
+<div class="pending-toolbar d-flex flex-wrap align-items-center gap-2 mb-3">
+  {{ catalog_filter_button() }}
+  {{ catalog_size(0, 20, [10, 20, 50, 100], '') }}
+</div>
+{{ catalog_filter([], [], 'potok-vk-filter') }}
+<div id="pending-list" class="row g-3 mb-4">
+  <div class="col-12">
+    <p class="mb-0 text-secondary">Загружаю список из ВК…</p>
+  </div>
+</div>
+<div id="editor" class="card shadow-sm d-none">
+  <div class="card-body">
+    <h2 class="h5">Правка</h2>
+    <form id="edit-form">
+      <input type="hidden" id="edit-owner">
+      <input type="hidden" id="edit-video">
+      <div class="mb-3">
+        <label class="form-label" for="edit-title">Название</label>
+        <input class="form-control" id="edit-title" maxlength="128" required>
+      </div>
+      <div class="mb-3">
+        <label class="form-label" for="edit-description">Описание</label>
+        <textarea class="form-control" id="edit-description" rows="4" maxlength="5000"></textarea>
+      </div>
+      <button class="btn btn-primary" type="submit">Сохранить</button>
+      <button class="btn btn-outline-secondary" id="edit-cancel" type="button">Отмена</button>
+    </form>
+  </div>
+</div>
+{{ catalog_rail(1, 1, [1], 20, '', false) }}
+{% endblock %}
+{% block scripts %}
+{{ catalog_scripts() }}
+<script>
+const csrf = document.querySelector('meta[name="csrf"]').content;
+const catalogError = document.getElementById("vk-error");
+const note = document.getElementById("vk-note");
+const videosBox = document.getElementById("pending-list");
+const pageSizes = [10, 20, 50, 100];
+let allVideos = [];
+let vkPage = Number(sessionStorage.getItem("potok-vk-page") || "1");
+let vkSize = Number(sessionStorage.getItem("potok-vk-page-size") || "20");
+if (!pageSizes.includes(vkSize)) vkSize = 20;
+const sizeSelect = document.getElementById("pending-size");
+if (sizeSelect) sizeSelect.value = String(vkSize);
+const editor = document.getElementById("editor");
+function showNote(kind, text) {
+  note.className = "alert alert-" + kind;
+  note.textContent = text;
+}
+
+function hideNote() {
+  note.className = "alert d-none";
+  note.textContent = "";
+}
+
+function vkLink(url) {
+  if (typeof url !== "string") return "";
+  if (url.startsWith("https://vk.com/") || url.startsWith("https://vkvideo.ru/")) return url;
+  return "";
+}
+
+async function callApi(path, payload) {
+  const response = await fetch(path, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "X-CSRF-Token": csrf
+    },
+    body: JSON.stringify(payload)
+  });
+  const data = await response.json().catch(() => ({}));
+  if (!response.ok) {
+    throw new Error(data.error || "Запрос не прошёл.");
+  }
+  return data;
+}
+
+function vkImage(url) {
+  if (typeof url !== "string" || !url.startsWith("https://")) return "";
+  try {
+    const host = new URL(url).hostname;
+    if (host === "userapi.com" || host.endsWith(".userapi.com")) return url;
+    if (host === "vk.com" || host.endsWith(".vk.com")) return url;
+    if (host === "vkuser.net" || host.endsWith(".vkuser.net")) return url;
+  } catch {
+    return "";
+  }
+  return "";
+}
+
+function actionButton(className, text, onClick) {
+  const button = document.createElement("button");
+  button.className = className;
+  button.type = "button";
+  button.textContent = text;
+  button.addEventListener("click", onClick);
+  return button;
+}
+
+function posterSrc(item) {
+  const url = item.image_url;
+  if (typeof url === "string" && url.startsWith("/poster/")) return url;
+  return vkImage(url);
+}
+
+function movieFacts(item) {
+  const facts = [
+    { title: "Рейтинг", text: "⭐ " + (item.rating || "нет") },
+    { title: "Качество", text: "🎞️ " + (item.quality || "нет") },
+    { title: "Длительность", text: "⏱️ " + (item.duration || "нет") },
+    { title: "Год", text: "📅 " + (item.year || "нет") },
+    { title: "Сиды", text: "🌱 " + (item.seeds || "нет") },
+    { title: "Размер", text: "💾 " + (item.size || "нет") },
+    { title: "Страна", text: "🌍 " + (item.country || "нет"), wide: true },
+    { title: "Жанр", text: "🎭 " + (item.genre || "нет"), wide: true, wrap: true },
+  ];
+  if (item.processing) facts.push({ title: "Статус", text: "⏳ Обрабатывается", wide: true });
+  return facts;
+}
+
+function plainNumber(text) {
+  if (typeof text !== "string" || text === "нет") return "";
+  const match = text.replace(",", ".").match(/-?\d+(?:\.\d+)?/);
+  return match ? match[0] : "";
+}
+
+function runtimeMinutes(text) {
+  if (typeof text !== "string" || text === "нет") return "";
+  const hours = text.match(/(\d+)\s*ч/);
+  const mins = text.match(/(\d+)\s*мин/);
+  if (hours || mins) {
+    return String((hours ? Number(hours[1]) * 60 : 0) + (mins ? Number(mins[1]) : 0));
+  }
+  const clock = text.match(/^(\d+):(\d{2})(?::(\d{2}))?$/);
+  if (!clock) return "";
+  if (clock[3]) return String(Number(clock[1]) * 60 + Number(clock[2]));
+  return clock[1];
+}
+
+function pageNumbers(page, pages) {
+  if (pages <= 7) return Array.from({length: pages}, (_, index) => index + 1);
+  const picked = [1, pages, page - 1, page, page + 1]
+    .filter((number, index, all) => number >= 1 && number <= pages && all.indexOf(number) === index)
+    .sort((a, b) => a - b);
+  const numbers = [];
+  let previous = 0;
+  picked.forEach((number) => {
+    if (previous && number > previous + 1) numbers.push(null);
+    numbers.push(number);
+    previous = number;
+  });
+  return numbers;
+}
+
+function pagerLink(text, page, disabled) {
+  const item = document.createElement("li");
+  item.className = "page-item" + (disabled ? " disabled" : "");
+  if (disabled) {
+    const span = document.createElement("span");
+    span.className = "page-link";
+    span.textContent = text;
+    item.append(span);
+    return item;
+  }
+  const link = document.createElement("a");
+  link.className = "page-link";
+  link.href = "#";
+  link.dataset.page = String(page);
+  link.textContent = text;
+  item.append(link);
+  return item;
+}
+
+function fillPager(page, pages) {
+  const nav = document.querySelector("#pending-rail nav");
+  if (!nav) return;
+  const list = document.createElement("ul");
+  list.className = "pagination pagination-sm mb-0";
+  list.append(pagerLink("Назад", page - 1, page <= 1));
+  pageNumbers(page, pages).forEach((number) => {
+    if (number === null) {
+      list.append(pagerLink("…", 0, true));
+      return;
+    }
+    if (number === page) {
+      const item = document.createElement("li");
+      item.className = "page-item active";
+      const span = document.createElement("span");
+      span.className = "page-link";
+      span.textContent = String(number);
+      item.append(span);
+      list.append(item);
+      return;
+    }
+    list.append(pagerLink(String(number), number, false));
+  });
+  list.append(pagerLink("Дальше", page + 1, page >= pages));
+  nav.replaceChildren(list);
+}
+
+function fillChoices(select, values) {
+  const current = select.value;
+  const first = select.options[0];
+  select.replaceChildren();
+  if (first) select.append(first);
+  values.forEach((value) => {
+    const option = document.createElement("option");
+    option.value = value;
+    option.textContent = value;
+    select.append(option);
+  });
+  if ([...select.options].some((option) => option.value === current)) select.value = current;
+}
+
+function renderVideos(rows) {
+  allVideos = rows;
+  videosBox.replaceChildren();
+  const total = document.getElementById("catalog-total");
+  if (total) total.textContent = String(rows.length);
+  const slot = document.getElementById("catalog-rail-slot");
+  if (!rows.length) {
+    if (slot) slot.classList.add("d-none");
+    const column = document.createElement("div");
+    column.className = "col-12";
+    const empty = document.createElement("p");
+    empty.className = "mb-0 text-secondary";
+    empty.textContent = "Видео в ВК пока нет.";
+    column.append(empty);
+    videosBox.append(column);
+    videosBox.dispatchEvent(new Event("pending-cards"));
+    return;
+  }
+  const pages = Math.max(1, Math.ceil(rows.length / vkSize));
+  if (vkPage > pages) vkPage = pages;
+  if (vkPage < 1) vkPage = 1;
+  const genres = new Map();
+  const qualities = new Set();
+  rows.forEach((item) => {
+    if (typeof item.genre === "string" && item.genre !== "нет") {
+      item.genre.split(/[,/]/).forEach((part) => {
+        const text = part.trim();
+        const key = text.toLocaleLowerCase("ru");
+        if (text && !genres.has(key)) genres.set(key, text);
+      });
+    }
+    if (typeof item.quality === "string" && item.quality !== "нет") qualities.add(item.quality);
+  });
+  fillChoices(document.getElementById("flt-genre"), [...genres.values()].sort((a, b) => a.localeCompare(b, "ru")));
+  fillChoices(document.getElementById("flt-quality"), [...qualities].sort((a, b) => a.localeCompare(b, "ru")));
+  const start = (vkPage - 1) * vkSize;
+  rows.slice(start, start + vkSize).forEach((item, index) => {
+    const column = document.createElement("div");
+    column.className = "col-12 col-md-6 col-xl-3 pending-card";
+    column.dataset.order = String(start + index);
+    column.dataset.size = plainNumber(item.size);
+    column.dataset.genre = !item.genre || item.genre === "нет" ? "" : item.genre;
+    column.dataset.quality = !item.quality || item.quality === "нет" ? "" : item.quality;
+    column.dataset.year = plainNumber(item.year);
+    column.dataset.runtime = runtimeMinutes(item.duration);
+    column.dataset.seeds = plainNumber(item.seeds);
+    column.dataset.rating = plainNumber(item.rating);
+    const card = document.createElement("div");
+    card.className = "card h-100";
+    const face = document.createElement("div");
+    face.className = "movie-face";
+    const image = posterSrc(item);
+    if (image) {
+      const poster = document.createElement("img");
+      poster.className = "movie-poster";
+      poster.alt = "";
+      poster.src = image;
+      face.append(poster);
+    }
+    const details = document.createElement("div");
+    details.className = "movie-details";
+    const meta = document.createElement("div");
+    meta.className = "movie-meta";
+    movieFacts(item).forEach((fact) => {
+      const line = document.createElement("span");
+      line.title = fact.title;
+      line.textContent = fact.text;
+      if (fact.wide) line.classList.add("movie-meta-wide");
+      if (fact.wrap) line.classList.add("movie-meta-genre");
+      meta.append(line);
+    });
+    details.append(meta);
+    if (item.overview) {
+      const overview = document.createElement("div");
+      overview.className = "movie-overview";
+      const description = document.createElement("p");
+      description.className = "movie-overview-text";
+      description.textContent = item.overview;
+      overview.append(description);
+      details.append(overview);
+    }
+    face.append(details);
+    card.append(face);
+    const body = document.createElement("div");
+    body.className = "card-body d-flex flex-column";
+    const title = document.createElement("h2");
+    title.className = "h5";
+    const titleText = document.createElement("span");
+    titleText.textContent = item.title || "Без названия";
+    title.append(titleText);
+    body.append(title);
+    const actions = document.createElement("div");
+    actions.className = "movie-actions mt-auto";
+    const link = vkLink(item.page_url);
+    if (link) {
+      const anchor = document.createElement("a");
+      anchor.className = "btn btn-outline-primary w-100";
+      anchor.href = link;
+      anchor.target = "_blank";
+      anchor.rel = "noopener";
+      anchor.textContent = "Открыть";
+      actions.append(anchor);
+    }
+    actions.append(
+      actionButton("btn btn-outline-secondary w-100", "Править", () => openEditor(item)),
+      actionButton("btn btn-outline-success w-100", "Отправить в бот", () => sendToBot(item)),
+      actionButton("btn btn-outline-danger w-100", "Удалить", () => removeVideo(item))
+    );
+    body.append(actions);
+    card.append(body);
+    column.append(card);
+    videosBox.append(column);
+  });
+  if (slot) slot.classList.remove("d-none");
+  fillPager(vkPage, pages);
+  sessionStorage.setItem("potok-vk-page", String(vkPage));
+  videosBox.dispatchEvent(new Event("pending-cards"));
+}
+
+function openEditor(item) {
+  document.getElementById("edit-owner").value = String(item.owner_id);
+  document.getElementById("edit-video").value = String(item.video_id);
+  document.getElementById("edit-title").value = item.vk_title || item.title || "";
+  document.getElementById("edit-description").value = item.vk_description || item.description || "";
+  editor.classList.remove("d-none");
+  document.getElementById("edit-title").focus();
+}
+
+async function sendToBot(item) {
+  hideNote();
+  try {
+    await callApi("/api/vk/bot", {owner_id: item.owner_id, video_id: item.video_id});
+    showNote("success", "Отправил в бот: " + (item.title || "видео") + ".");
+  } catch (exc) {
+    showNote("danger", exc.message);
+  }
+}
+
+async function removeVideo(item) {
+  const name = item.title || "это видео";
+  if (!window.confirm("Удалить «" + name + "» из ВКонтакте?")) return;
+  hideNote();
+  try {
+    await callApi("/api/vk/delete", {owner_id: item.owner_id, video_id: item.video_id});
+    showNote("success", "Видео удалено.");
+    await load();
+  } catch (exc) {
+    showNote("danger", exc.message);
+  }
+}
+
+document.getElementById("edit-cancel").addEventListener("click", () => {
+  editor.classList.add("d-none");
+});
+
+document.getElementById("edit-form").addEventListener("submit", async (event) => {
+  event.preventDefault();
+  hideNote();
+  try {
+    await callApi("/api/vk/edit", {
+      owner_id: Number(document.getElementById("edit-owner").value),
+      video_id: Number(document.getElementById("edit-video").value),
+      title: document.getElementById("edit-title").value,
+      description: document.getElementById("edit-description").value
+    });
+    editor.classList.add("d-none");
+    showNote("success", "Название и описание сохранены.");
+    await load();
+  } catch (exc) {
+    showNote("danger", exc.message);
+  }
+});
+
+let vkLoading = false;
+
+async function load() {
+  if (vkLoading) return;
+  vkLoading = true;
+  let response;
+  try {
+    response = await fetch("/api/vk");
+  } catch (exc) {
+    catalogError.textContent = "Список видео не загрузился. Обновите страницу.";
+    catalogError.classList.remove("d-none");
+    return;
+  } finally {
+    vkLoading = false;
+  }
+  if (!response.ok) {
+    catalogError.textContent = "Список видео не загрузился. Обновите страницу.";
+    catalogError.classList.remove("d-none");
+    return;
+  }
+  const data = await response.json();
+  if (data.error) {
+    catalogError.textContent = data.error;
+    catalogError.classList.remove("d-none");
+  } else {
+    catalogError.classList.add("d-none");
+    catalogError.textContent = "";
+  }
+  renderVideos(data.videos || []);
+}
+
+document.addEventListener("catalog-size", (event) => {
+  vkSize = pageSizes.includes(event.detail) ? event.detail : 20;
+  vkPage = 1;
+  sessionStorage.setItem("potok-vk-page-size", String(vkSize));
+  sessionStorage.setItem("potok-vk-page", "1");
+  renderVideos(allVideos);
+});
+document.getElementById("pending-rail").addEventListener("click", (event) => {
+  const link = event.target.closest("[data-page]");
+  if (!link) return;
+  event.preventDefault();
+  vkPage = Number(link.dataset.page);
+  renderVideos(allVideos);
+});
+
+load();
+setInterval(load, 3000);
+</script>
+{% endblock %}

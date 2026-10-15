@@ -1,0 +1,29 @@
+{% extends "base.html" %}
+{% block title %}Поток — вход{% endblock %}
+{% block body %}
+<div class="row justify-content-center">
+  <div class="col-md-6 col-lg-5">
+    <div class="card shadow-sm">
+      <div class="card-body">
+        <img class="d-block mx-auto mb-3" src="{{ url_for('static', filename='logo.svg') }}" alt="" width="112" height="112">
+        <h1 class="h3 mb-3 text-center">Вход в Поток</h1>
+        {% if note %}<div class="alert alert-danger">{{ note }}</div>{% endif %}
+        <form method="post" action="{{ url_for('login') }}">
+          <input type="hidden" name="csrf" value="{{ csrf }}">
+          <div class="mb-3">
+            <label class="form-label" for="username">Имя</label>
+            <input class="form-control" id="username" name="username" autocomplete="username">
+          </div>
+          <div class="mb-3">
+            <label class="form-label" for="password">Пароль</label>
+            <input class="form-control" id="password" name="password" type="password" autocomplete="current-password">
+          </div>
+          <button class="btn btn-primary" type="submit">Войти</button>
+        </form>
+        <p class="text-secondary mt-3 mb-0">Первый вход: имя {{ default_name }}, пароль {{ default_name }}.</p>
+        <p class="mt-2 mb-0"><a href="{{ url_for('about_page') }}">О проекте</a></p>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

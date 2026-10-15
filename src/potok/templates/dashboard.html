@@ -1,0 +1,93 @@
+{% extends "base.html" %}
+{% block title %}Поток — дашборд{% endblock %}
+{% block head %}
+<style>
+  .dash-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(11.5rem, 1fr));
+    gap: 1rem;
+  }
+  .dash-tile {
+    aspect-ratio: 1;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    text-align: center;
+    gap: 0.4rem;
+    padding: 1.1rem;
+    background: #fff;
+    border: 1px solid #e7e5e4;
+    border-radius: 16px;
+    box-shadow: 0 8px 24px rgb(28 25 23 / 6%);
+    color: inherit;
+    text-decoration: none;
+    transition: transform 0.15s ease, box-shadow 0.15s ease, border-color 0.15s ease;
+  }
+  .dash-tile:hover {
+    transform: translateY(-4px);
+    border-color: #1493e0;
+    box-shadow: 0 14px 28px rgb(20 147 224 / 18%);
+    color: inherit;
+  }
+  .dash-tile:focus-visible {
+    outline: 2px solid #1493e0;
+    outline-offset: 3px;
+  }
+  .dash-tile-label {
+    color: #57534e;
+    line-height: 1.25;
+  }
+  .dash-tile-value {
+    font-size: clamp(2rem, 4vw, 2.75rem);
+    font-weight: 600;
+    line-height: 1;
+    letter-spacing: -0.03em;
+  }
+</style>
+{% endblock %}
+{% block body %}
+<h1 class="h3 mb-4">Дашборд</h1>
+{% if vk_status.kind == "ok" %}
+<div class="alert alert-success">{{ vk_status.message }}</div>
+{% elif vk_status.kind == "unknown" %}
+<div class="alert alert-secondary">
+  {{ vk_status.message }}
+  <a href="{{ url_for('settings') }}#vk">Обновить токен</a>
+</div>
+{% else %}
+<div class="alert alert-warning">
+  {{ vk_status.message }}
+  <a href="{{ url_for('settings') }}#vk">Обновить токен</a>
+</div>
+{% endif %}
+{% if config_error %}
+<div class="alert alert-danger">Файл настроек сейчас не читается: {{ config_error }}</div>
+{% endif %}
+<div class="dash-grid mb-4">
+  <a class="dash-tile" href="{{ url_for('pending') }}">
+    <span class="dash-tile-label">Ожидают одобрения</span>
+    <span class="dash-tile-value">{{ pending_count }}</span>
+  </a>
+  <a class="dash-tile" href="{{ url_for('approved_page') }}">
+    <span class="dash-tile-label">Одобрено</span>
+    <span class="dash-tile-value">{{ approved }}</span>
+  </a>
+  <a class="dash-tile" href="{{ url_for('rejected_page') }}">
+    <span class="dash-tile-label">Отклонено</span>
+    <span class="dash-tile-value">{{ rejected }}</span>
+  </a>
+  <a class="dash-tile" href="{{ url_for('downloads') }}">
+    <span class="dash-tile-label">Загружаются</span>
+    <span class="dash-tile-value">{{ loading }}</span>
+  </a>
+  <a class="dash-tile" href="{{ url_for('vk_queue_page') }}">
+    <span class="dash-tile-label">Выгружаются в ВК</span>
+    <span class="dash-tile-value">{{ exporting }}</span>
+  </a>
+  <a class="dash-tile" href="{{ url_for('logs_page') }}">
+    <span class="dash-tile-label">Ошибки в журнале</span>
+    <span class="dash-tile-value">{{ errors }}</span>
+  </a>
+</div>
+{% endblock %}

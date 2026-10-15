@@ -1,0 +1,667 @@
+{% macro catalog_style() %}
+<style>
+  .movie-actions {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.4rem;
+  }
+  .movie-actions.movie-actions-one {
+    grid-template-columns: 1fr;
+  }
+  .movie-actions .action-wide {
+    grid-column: 1 / -1;
+  }
+  .pending-card[hidden] {
+    display: none !important;
+  }
+  .movie-face {
+    position: relative;
+    aspect-ratio: 2 / 3;
+    width: 100%;
+    overflow: hidden;
+    background: #fff;
+  }
+  .movie-poster {
+    display: block;
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    object-position: center;
+    transition: opacity 0.15s ease;
+  }
+  .movie-details {
+    position: absolute;
+    inset: 0;
+    overflow: hidden;
+    padding: 0.55rem 0.7rem;
+    background: #fff;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.15s ease;
+  }
+  .movie-meta {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.12rem 0.45rem;
+    margin: 0;
+    font-size: 0.75rem;
+    line-height: 1.25;
+    color: #495057;
+  }
+  .movie-meta span {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .movie-meta .movie-meta-wide {
+    grid-column: 1 / -1;
+  }
+  .movie-meta .movie-meta-genre {
+    white-space: normal;
+    overflow: visible;
+    text-overflow: unset;
+  }
+  .movie-overview {
+    position: absolute;
+    left: 0.7rem;
+    right: 0.7rem;
+    top: 50%;
+    transform: translateY(-50%);
+    display: flex;
+    align-items: center;
+    overflow: hidden;
+    max-height: calc(100% - 9rem);
+  }
+  .movie-overview-text {
+    width: 100%;
+    margin: 0;
+    overflow: hidden;
+    font-size: 0.875rem;
+    line-height: 1.35;
+  }
+  .movie-face:not(:has(.movie-poster)) .movie-details {
+    opacity: 1;
+    pointer-events: auto;
+  }
+  @media (hover: hover) {
+    .pending-card:hover .movie-details,
+    .pending-card:focus-within .movie-details {
+      opacity: 1;
+      pointer-events: auto;
+    }
+    .pending-card:hover .movie-poster,
+    .pending-card:focus-within .movie-poster {
+      opacity: 0;
+    }
+  }
+  @media (hover: none) {
+    .movie-details {
+      opacity: 1;
+      pointer-events: auto;
+    }
+    .movie-poster {
+      opacity: 0;
+    }
+  }
+  .pending-card .card-body > .h5 {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 2.6em;
+    margin-bottom: 0.5rem;
+    text-align: center;
+    line-height: 1.3;
+  }
+  .pending-card .card-body > .h5 span {
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+    width: 100%;
+  }
+  .pending-card .card {
+    box-shadow: 0 0.125rem 0.35rem rgba(0, 0, 0, 0.08);
+    transition: box-shadow 0.15s ease, transform 0.15s ease;
+  }
+  @media (min-width: 1200px) {
+    #pending-list {
+      justify-content: center;
+    }
+    #pending-list > .pending-card {
+      flex: 0 0 auto;
+      width: calc(240px + var(--bs-gutter-x));
+      max-width: calc(240px + var(--bs-gutter-x));
+    }
+    .pending-card .card {
+      width: 240px;
+      margin-inline: auto;
+    }
+    .pending-card .card-body {
+      padding: 0.7rem 0.6rem 0.75rem;
+    }
+    .pending-card .card-body > .h5 {
+      font-size: 1rem;
+    }
+    .pending-card .movie-actions .btn {
+      --bs-btn-padding-y: 0.28rem;
+      --bs-btn-padding-x: 0.4rem;
+      --bs-btn-font-size: 0.82rem;
+    }
+  }
+  .pending-card:hover .card {
+    box-shadow: 0 1rem 2.2rem rgba(0, 0, 0, 0.3) !important;
+    transform: translateY(-3px);
+  }
+  .pending-rail-slot {
+    position: fixed;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    left: calc(50% + 660px);
+    z-index: 20;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    pointer-events: none;
+  }
+  .pending-rail {
+    pointer-events: auto;
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0.45rem;
+    padding: 0.4rem;
+    border: 1px solid rgba(0, 0, 0, 0.08);
+    border-radius: 0.6rem;
+    background: rgba(255, 255, 255, 0.45);
+    opacity: 0.45;
+    transition: opacity 0.15s ease, background 0.15s ease, box-shadow 0.15s ease, border-color 0.15s ease;
+  }
+  .pending-rail:hover {
+    opacity: 1;
+    background: #fff;
+    border-color: rgba(0, 0, 0, 0.28);
+    box-shadow: 0 0.5rem 1.4rem rgba(0, 0, 0, 0.22);
+  }
+  .pending-rail .pagination {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .pending-rail .page-link {
+    margin-left: 0;
+    border-radius: 0;
+    text-align: center;
+    min-width: 2.6rem;
+  }
+  .pending-rail .page-item + .page-item .page-link {
+    margin-top: calc(-1 * var(--bs-border-width));
+  }
+  .pending-rail .page-item:first-child .page-link {
+    border-top-left-radius: var(--bs-pagination-border-radius);
+    border-top-right-radius: var(--bs-pagination-border-radius);
+    border-bottom-left-radius: 0;
+  }
+  .pending-rail .page-item:last-child .page-link {
+    border-bottom-right-radius: var(--bs-pagination-border-radius);
+    border-bottom-left-radius: var(--bs-pagination-border-radius);
+    border-top-right-radius: 0;
+  }
+  .pending-rail #to-top {
+    width: 100%;
+  }
+  @media (max-width: 1399.98px) {
+    .pending-rail-slot { left: calc(50% + 570px); }
+  }
+  @media (max-width: 1199.98px) {
+    .pending-rail-slot { left: calc(50% + 480px); }
+  }
+  @media (max-width: 991.98px) {
+    .pending-rail-slot { left: calc(50% + 360px); }
+  }
+  @media (max-width: 767.98px) {
+    .pending-rail-slot { left: calc(50% + 270px); }
+  }
+  @media (max-width: 575.98px) {
+    .pending-rail-slot {
+      left: auto;
+      justify-content: flex-end;
+      padding-right: 0.75rem;
+    }
+  }
+</style>
+{% endmacro %}
+
+{% macro movie_face(item, year) %}
+<div class="movie-face">
+  {% if item.poster_url %}
+  <img src="{{ url_for('poster', row_id=item.row_id) }}" class="movie-poster" alt="">
+  {% endif %}
+  <div class="movie-details">
+    <div class="movie-meta">
+      <span title="Рейтинг">⭐ {{ item.rating if item.rating is not none else "нет" }}</span>
+      <span title="Качество">🎞️ {{ item.quality or "нет" }}</span>
+      <span title="Длительность">⏱️ {{ runtime_text(item.runtime_minutes) }}</span>
+      <span title="Год">📅 {{ year if year is not none else "нет" }}</span>
+      <span title="Сиды">🌱 {{ item.seeders if item.seeders is not none else "нет" }}</span>
+      <span title="Размер">💾 {{ "%.2f"|format(item.size_bytes / 1073741824) if item.size_bytes is not none else "нет" }}{% if item.size_bytes is not none %} ГБ{% endif %}</span>
+      <span class="movie-meta-wide" title="Страна">🌍 {{ country_text(item.country) }}</span>
+      <span class="movie-meta-wide movie-meta-genre" title="Жанр">🎭 {{ genre_text(item.genre) or "нет" }}</span>
+    </div>
+    {% if item.overview %}
+    <div class="movie-overview"><p class="movie-overview-text">{{ item.overview }}</p></div>
+    {% endif %}
+  </div>
+</div>
+{% endmacro %}
+
+{% macro catalog_size(total, size, page_sizes, endpoint='pending') %}
+<div class="d-flex align-items-center gap-2 ms-auto">
+  <span class="text-secondary small">Всего <span id="catalog-total">{{ total }}</span></span>
+  <label class="form-label mb-0" for="pending-size">На странице</label>
+  <select class="form-select form-select-sm w-auto" id="pending-size">
+    {% for count in page_sizes %}
+    <option
+      value="{% if endpoint %}{{ url_for(endpoint, size=count, page=1) }}{% else %}{{ count }}{% endif %}"
+      {% if count == size %}selected{% endif %}
+    >{{ count }}</option>
+    {% endfor %}
+  </select>
+</div>
+{% endmacro %}
+
+{% macro catalog_filter_button() %}
+<button class="btn btn-outline-secondary" id="flt-toggle" type="button" aria-expanded="false" aria-controls="flt-panel">Фильтр</button>
+{% endmacro %}
+
+{% macro catalog_filter(genres, qualities, store='potok-pending-filter') %}
+<div class="card shadow-sm mb-3 d-none" id="flt-panel" data-store="{{ store }}">
+  <div class="card-body">
+    <div class="row g-2 align-items-end">
+      <div class="col-6 col-md-auto">
+        <label class="form-label small mb-1" for="flt-sort">Сортировка</label>
+        <select class="form-select form-select-sm" id="flt-sort">
+          <option value="">как в очереди</option>
+          <option value="size">размер</option>
+          <option value="genre">жанр</option>
+          <option value="quality">качество</option>
+          <option value="year">год</option>
+          <option value="runtime">длительность</option>
+          <option value="seeds">сиды</option>
+          <option value="rating">рейтинг</option>
+        </select>
+      </div>
+      <div class="col-6 col-md-auto">
+        <label class="form-label small mb-1" for="flt-dir">Порядок</label>
+        <select class="form-select form-select-sm" id="flt-dir">
+          <option value="desc">сначала больше</option>
+          <option value="asc">сначала меньше</option>
+        </select>
+      </div>
+      <div class="col-6 col-md-auto">
+        <label class="form-label small mb-1" for="flt-mode">Условия</label>
+        <select class="form-select form-select-sm" id="flt-mode">
+          <option value="all">все сразу</option>
+          <option value="any">любое из</option>
+        </select>
+      </div>
+      <div class="col-6 col-md-auto">
+        <label class="form-label small mb-1" for="flt-size-min">Размер от, ГБ</label>
+        <input class="form-control form-control-sm" id="flt-size-min" type="number" min="0" step="0.1" inputmode="decimal">
+      </div>
+      <div class="col-6 col-md-auto">
+        <label class="form-label small mb-1" for="flt-size-max">Размер до, ГБ</label>
+        <input class="form-control form-control-sm" id="flt-size-max" type="number" min="0" step="0.1" inputmode="decimal">
+      </div>
+      <div class="col-6 col-md-auto">
+        <label class="form-label small mb-1" for="flt-genre">Жанр</label>
+        <select class="form-select form-select-sm" id="flt-genre">
+          <option value="">любой</option>
+          {% for genre in genres %}
+          <option value="{{ genre }}">{{ genre }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="col-6 col-md-auto">
+        <label class="form-label small mb-1" for="flt-quality">Качество</label>
+        <select class="form-select form-select-sm" id="flt-quality">
+          <option value="">любое</option>
+          {% for quality in qualities %}
+          <option value="{{ quality }}">{{ quality }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="col-6 col-md-auto">
+        <label class="form-label small mb-1" for="flt-year-min">Год от</label>
+        <input class="form-control form-control-sm" id="flt-year-min" type="number" min="1900" max="2100" step="1" inputmode="numeric">
+      </div>
+      <div class="col-6 col-md-auto">
+        <label class="form-label small mb-1" for="flt-year-max">Год до</label>
+        <input class="form-control form-control-sm" id="flt-year-max" type="number" min="1900" max="2100" step="1" inputmode="numeric">
+      </div>
+      <div class="col-6 col-md-auto">
+        <label class="form-label small mb-1" for="flt-seeds-min">Сиды от</label>
+        <input class="form-control form-control-sm" id="flt-seeds-min" type="number" min="0" step="1" inputmode="numeric">
+      </div>
+      <div class="col-6 col-md-auto">
+        <label class="form-label small mb-1" for="flt-seeds-max">Сиды до</label>
+        <input class="form-control form-control-sm" id="flt-seeds-max" type="number" min="0" step="1" inputmode="numeric">
+      </div>
+      <div class="col-6 col-md-auto">
+        <label class="form-label small mb-1" for="flt-rating-min">Рейтинг от</label>
+        <input class="form-control form-control-sm" id="flt-rating-min" type="number" min="0" max="10" step="0.1" inputmode="decimal">
+      </div>
+      <div class="col-6 col-md-auto">
+        <label class="form-label small mb-1" for="flt-rating-max">Рейтинг до</label>
+        <input class="form-control form-control-sm" id="flt-rating-max" type="number" min="0" max="10" step="0.1" inputmode="decimal">
+      </div>
+      <div class="col-6 col-md-auto">
+        <label class="form-label small mb-1" for="flt-runtime-min">Длительность от, мин</label>
+        <input class="form-control form-control-sm" id="flt-runtime-min" type="number" min="0" step="1" inputmode="numeric">
+      </div>
+      <div class="col-6 col-md-auto">
+        <label class="form-label small mb-1" for="flt-runtime-max">Длительность до, мин</label>
+        <input class="form-control form-control-sm" id="flt-runtime-max" type="number" min="0" step="1" inputmode="numeric">
+      </div>
+      <div class="col-auto">
+        <button class="btn btn-sm btn-outline-secondary" id="flt-reset" type="button">Сбросить фильтр</button>
+      </div>
+    </div>
+    <p class="small text-secondary mb-0 mt-2" id="flt-count"></p>
+  </div>
+</div>
+<div class="alert alert-secondary d-none" id="flt-empty">По этому фильтру ничего не нашлось.</div>
+{% endmacro %}
+
+{% macro catalog_rail(page, pages, page_numbers, size, endpoint='pending', show=true) %}
+<div class="pending-rail-slot{% if not show %} d-none{% endif %}" id="catalog-rail-slot">
+  <aside class="pending-rail" id="pending-rail">
+    <nav aria-label="Страницы очереди">
+      <ul class="pagination pagination-sm mb-0">
+        {% if page > 1 %}
+        <li class="page-item"><a class="page-link" {% if endpoint %}href="{{ url_for(endpoint, size=size, page=page - 1) }}"{% else %}href="#" data-page="{{ page - 1 }}"{% endif %}>Назад</a></li>
+        {% else %}
+        <li class="page-item disabled"><span class="page-link">Назад</span></li>
+        {% endif %}
+        {% for number in page_numbers %}
+          {% if number is none %}
+          <li class="page-item disabled"><span class="page-link">…</span></li>
+          {% elif number == page %}
+          <li class="page-item active"><span class="page-link">{{ number }}</span></li>
+          {% else %}
+          <li class="page-item"><a class="page-link" {% if endpoint %}href="{{ url_for(endpoint, size=size, page=number) }}"{% else %}href="#" data-page="{{ number }}"{% endif %}>{{ number }}</a></li>
+          {% endif %}
+        {% endfor %}
+        {% if page < pages %}
+        <li class="page-item"><a class="page-link" {% if endpoint %}href="{{ url_for(endpoint, size=size, page=page + 1) }}"{% else %}href="#" data-page="{{ page + 1 }}"{% endif %}>Дальше</a></li>
+        {% else %}
+        <li class="page-item disabled"><span class="page-link">Дальше</span></li>
+        {% endif %}
+      </ul>
+    </nav>
+    <button class="btn btn-dark btn-sm" id="to-top" type="button" hidden>Наверх</button>
+  </aside>
+</div>
+{% endmacro %}
+
+{% macro catalog_scripts() %}
+<script>
+(() => {
+  function fitOverview(node) {
+    const overview = node.parentElement;
+    const details = overview ? overview.parentElement : null;
+    const meta = details ? details.querySelector(".movie-meta") : null;
+    if (overview && details && meta && details.clientHeight > 0) {
+      const faceH = details.clientHeight;
+      const topLimit = meta.offsetTop + meta.offsetHeight + 8;
+      const bottomLimit = faceH - 8;
+      const center = faceH / 2;
+      const half = Math.min(center - topLimit, bottomLimit - center);
+      if (half >= 24) {
+        overview.style.top = "50%";
+        overview.style.transform = "translateY(-50%)";
+        overview.style.maxHeight = (half * 2) + "px";
+      } else {
+        overview.style.top = topLimit + "px";
+        overview.style.transform = "none";
+        overview.style.maxHeight = Math.max(0, bottomLimit - topLimit) + "px";
+      }
+    }
+    const full = node.dataset.full || node.textContent || "";
+    node.dataset.full = full;
+    node.style.maxHeight = "";
+    node.textContent = full;
+    const limit = overview ? overview.clientHeight : node.clientHeight;
+    if (!full || limit === 0) return;
+    node.style.maxHeight = limit + "px";
+    if (node.scrollHeight <= node.clientHeight + 1) return;
+    let low = 0;
+    let high = full.length;
+    while (low < high) {
+      const mid = Math.ceil((low + high) / 2);
+      node.textContent = full.slice(0, mid).replace(/\s+$/u, "") + "…";
+      if (node.scrollHeight > node.clientHeight + 1) high = mid - 1;
+      else low = mid;
+    }
+    node.textContent = full.slice(0, low).replace(/\s+$/u, "") + "…";
+  }
+  function fitOverviews() {
+    document.querySelectorAll(".movie-overview-text").forEach(fitOverview);
+  }
+  const list = document.getElementById("pending-list");
+  if (list) list.addEventListener("pending-cards", () => requestAnimationFrame(fitOverviews));
+  window.addEventListener("resize", () => requestAnimationFrame(fitOverviews));
+  requestAnimationFrame(fitOverviews);
+})();
+(() => {
+  const list = document.getElementById("pending-list");
+  const count = document.getElementById("flt-count");
+  if (!list || !count) return;
+  let cards = Array.from(list.querySelectorAll(".pending-card"));
+  const empty = document.getElementById("flt-empty");
+  const panel = document.getElementById("flt-panel");
+  const toggle = document.getElementById("flt-toggle");
+  const storageKey = panel.dataset.store || "potok-pending-filter";
+  const openKey = storageKey + "-open";
+  const ids = [
+    "flt-sort", "flt-dir", "flt-mode",
+    "flt-size-min", "flt-size-max",
+    "flt-genre", "flt-quality",
+    "flt-year-min", "flt-year-max",
+    "flt-seeds-min", "flt-seeds-max",
+    "flt-rating-min", "flt-rating-max",
+    "flt-runtime-min", "flt-runtime-max",
+  ];
+  const fields = Object.fromEntries(ids.map((id) => [id, document.getElementById(id)]));
+  const qualityRank = { "2160p": 2160, "1080p": 1080, "720p": 720, "480p": 480 };
+
+  function readNumber(id) {
+    const value = fields[id].value.trim();
+    if (value === "") return null;
+    const number = Number(value);
+    return Number.isFinite(number) ? number : null;
+  }
+
+  function cardNumber(card, name) {
+    const raw = card.dataset[name] || "";
+    if (raw === "") return null;
+    const number = Number(raw);
+    return Number.isFinite(number) ? number : null;
+  }
+
+  function inRange(value, min, max) {
+    if (value === null) return false;
+    if (min !== null && value < min) return false;
+    if (max !== null && value > max) return false;
+    return true;
+  }
+
+  function genreMatch(card, wanted) {
+    const parts = (card.dataset.genre || "")
+      .toLocaleLowerCase("ru")
+      .replaceAll("/", ",")
+      .split(",")
+      .map((part) => part.trim());
+    return parts.includes(wanted.toLocaleLowerCase("ru"));
+  }
+
+  function checks() {
+    const rules = [];
+    const sizeMin = readNumber("flt-size-min");
+    const sizeMax = readNumber("flt-size-max");
+    if (sizeMin !== null || sizeMax !== null) {
+      rules.push((card) => inRange(cardNumber(card, "size"), sizeMin, sizeMax));
+    }
+    const genre = fields["flt-genre"].value;
+    if (genre) rules.push((card) => genreMatch(card, genre));
+    const quality = fields["flt-quality"].value.trim().toLocaleLowerCase("ru");
+    if (quality) {
+      rules.push((card) => (card.dataset.quality || "").trim().toLocaleLowerCase("ru") === quality);
+    }
+    const yearMin = readNumber("flt-year-min");
+    const yearMax = readNumber("flt-year-max");
+    if (yearMin !== null || yearMax !== null) {
+      rules.push((card) => inRange(cardNumber(card, "year"), yearMin, yearMax));
+    }
+    const seedsMin = readNumber("flt-seeds-min");
+    const seedsMax = readNumber("flt-seeds-max");
+    if (seedsMin !== null || seedsMax !== null) {
+      rules.push((card) => inRange(cardNumber(card, "seeds"), seedsMin, seedsMax));
+    }
+    const ratingMin = readNumber("flt-rating-min");
+    const ratingMax = readNumber("flt-rating-max");
+    if (ratingMin !== null || ratingMax !== null) {
+      rules.push((card) => inRange(cardNumber(card, "rating"), ratingMin, ratingMax));
+    }
+    const runtimeMin = readNumber("flt-runtime-min");
+    const runtimeMax = readNumber("flt-runtime-max");
+    if (runtimeMin !== null || runtimeMax !== null) {
+      rules.push((card) => inRange(cardNumber(card, "runtime"), runtimeMin, runtimeMax));
+    }
+    return rules;
+  }
+
+  function sortKey(card, field) {
+    if (field === "genre" || field === "quality") {
+      const text = (card.dataset[field] || "").trim();
+      const rank = field === "quality" ? qualityRank[text.toLowerCase()] : undefined;
+      return {
+        missing: text === "",
+        num: rank === undefined ? null : rank,
+        text: text.toLocaleLowerCase("ru"),
+      };
+    }
+    const number = cardNumber(card, field);
+    return { missing: number === null, num: number, text: "" };
+  }
+
+  function compare(left, right) {
+    const field = fields["flt-sort"].value;
+    const order = Number(left.dataset.order) - Number(right.dataset.order);
+    if (!field) return order;
+    const direction = fields["flt-dir"].value === "asc" ? 1 : -1;
+    const a = sortKey(left, field);
+    const b = sortKey(right, field);
+    if (a.missing && b.missing) return order;
+    if (a.missing) return 1;
+    if (b.missing) return -1;
+    if (a.num !== null && b.num !== null && a.num !== b.num) return (a.num - b.num) * direction;
+    if (a.text !== b.text) return a.text.localeCompare(b.text, "ru") * direction;
+    return order;
+  }
+
+  function apply() {
+    const rules = checks();
+    const any = fields["flt-mode"].value === "any";
+    const visible = [];
+    for (const card of cards) {
+      const hits = rules.map((rule) => rule(card));
+      const show = hits.length === 0 || (any ? hits.some(Boolean) : hits.every(Boolean));
+      card.hidden = !show;
+      if (show) visible.push(card);
+    }
+    visible.sort(compare);
+    const hiddenCards = cards.filter((card) => card.hidden);
+    for (const card of visible.concat(hiddenCards)) list.appendChild(card);
+    count.textContent = `Показано: ${visible.length} из ${cards.length}`;
+    if (empty) empty.classList.toggle("d-none", visible.length !== 0 || cards.length === 0);
+    const saved = {};
+    for (const id of ids) saved[id] = fields[id].value;
+    sessionStorage.setItem(storageKey, JSON.stringify(saved));
+  }
+
+  function restore() {
+    try {
+      const saved = JSON.parse(sessionStorage.getItem(storageKey) || "{}");
+      for (const id of ids) {
+        if (typeof saved[id] === "string") fields[id].value = saved[id];
+      }
+    } catch {
+      sessionStorage.removeItem(storageKey);
+    }
+  }
+
+  function filterActive() {
+    if (fields["flt-sort"].value) return true;
+    for (const id of ids) {
+      if (id === "flt-sort" || id === "flt-dir" || id === "flt-mode") continue;
+      if (fields[id].value.trim()) return true;
+    }
+    return false;
+  }
+
+  function paintToggle() {
+    const open = !panel.classList.contains("d-none");
+    const on = open || filterActive();
+    toggle.classList.toggle("btn-secondary", on);
+    toggle.classList.toggle("btn-outline-secondary", !on);
+    toggle.setAttribute("aria-expanded", open ? "true" : "false");
+  }
+
+  function setOpen(open) {
+    panel.classList.toggle("d-none", !open);
+    sessionStorage.setItem(openKey, open ? "1" : "0");
+    paintToggle();
+  }
+
+  for (const id of ids) fields[id].addEventListener("input", () => {
+    apply();
+    paintToggle();
+  });
+  document.getElementById("flt-reset").addEventListener("click", () => {
+    for (const id of ids) fields[id].value = fields[id].tagName === "SELECT" ? fields[id].options[0].value : "";
+    sessionStorage.removeItem(storageKey);
+    apply();
+    paintToggle();
+  });
+  toggle.addEventListener("click", () => setOpen(panel.classList.contains("d-none")));
+  restore();
+  apply();
+  if (sessionStorage.getItem(openKey) === "1") setOpen(true);
+  else paintToggle();
+  list.addEventListener("pending-cards", () => {
+    cards = Array.from(list.querySelectorAll(".pending-card"));
+    apply();
+  });
+})();
+(() => {
+  const size = document.getElementById("pending-size");
+  if (size) {
+    size.addEventListener("change", () => {
+      if (!size.value) return;
+      if (size.value.startsWith("/")) location.href = size.value;
+      else document.dispatchEvent(new CustomEvent("catalog-size", { detail: Number(size.value) }));
+    });
+  }
+  const top = document.getElementById("to-top");
+  if (!top) return;
+  function paintTop() {
+    top.hidden = window.scrollY < window.innerHeight;
+  }
+  window.addEventListener("scroll", paintTop, { passive: true });
+  top.addEventListener("click", () => window.scrollTo({ top: 0, behavior: "smooth" }));
+  paintTop();
+})();
+</script>
+{% endmacro %}
