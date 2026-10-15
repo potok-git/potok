@@ -1,4 +1,4 @@
-# Установка Потока на Windows: Docker, примеры настроек, запуск сайта.
+﻿# Установка Потока на Windows: Docker, примеры настроек, запуск сайта.
 $ErrorActionPreference = "Stop"
 [Console]::OutputEncoding = [System.Text.Encoding]::UTF8
 
@@ -39,7 +39,7 @@ function Wait-Docker {
         }
         Start-Sleep -Seconds 4
     }
-    throw "Docker так и не запустился. Если Windows просит перезагрузку — перезагрузите компьютер и запустите скрипт ещё раз."
+    throw "Docker так и не запустился. Если Windows просит перезагрузку - перезагрузите компьютер и запустите скрипт ещё раз."
 }
 
 function Wait-Url([string]$Url) {
@@ -61,7 +61,7 @@ if (-not (Get-Command docker -ErrorAction SilentlyContinue)) {
     try {
         Install-DockerDesktop
     } catch {
-        Write-Host "Не получилось поставить Docker. Если система просит перезагрузку — перезагрузите компьютер и запустите скрипт ещё раз."
+        Write-Host "Не получилось поставить Docker. Если система просит перезагрузку - перезагрузите компьютер и запустите скрипт ещё раз."
         throw
     }
     if (-not (Get-Command docker -ErrorAction SilentlyContinue)) {
